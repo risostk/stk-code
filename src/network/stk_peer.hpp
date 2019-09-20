@@ -248,6 +248,8 @@ public:
     // ------------------------------------------------------------------------
     const std::set<std::string>& getClientCapabilities() const
                                               { return m_client_capabilities; }
+    // ------------------------------------------------------------------------
+    int addonsCount = 0;
 };   // STKPeer
 
 #endif // STK_PEER_HPP

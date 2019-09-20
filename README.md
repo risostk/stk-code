@@ -35,3 +35,25 @@ The export utilities  perform the needed transformation, so in Blender you just 
 ## Building from source
 
 Building instructions can be found in [`INSTALL.md`](/INSTALL.md)
+
+
+# STK Addon Server Modification
+
+This modification allows to create servers that allow them to let in only users with certain number of addon tracks. You need to insert only one xml element `<addon-tracks-threshold value="YOUR_THRESHOLD" />` into your server config, for example, like this:
+
+```
+...
+<official-karts-threshold value="1" />
+<official-tracks-threshold value="0.7" />
+<addon-tracks-threshold value="15" />
+<min-start-game-players value="1" />
+...
+```
+
+The code above will tell all users with less than 15 addons that their game data is incompatible, and will allow entry for other users.
+
+The modification also applies to sqlite STK servers, it creates a field `addons_count` which stores the number of addons for a connected player. Be careful then when applying this code to a server with existing database, you may need to copy all data from previous database to a new one and fill `addons_count` with a not-null value.
+
+# Other STK information
+
+All info not regarding this modification can be found in official STK repo: github.com/supertuxkart/stk-code/
