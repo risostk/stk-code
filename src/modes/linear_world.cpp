@@ -661,7 +661,7 @@ void LinearWorld::getKartsDisplayInfo(
             }
             rank_info.m_text = irr::core::stringw(str.c_str());
         }
-        else if (kart->hasFinishedRace())
+        else
         {
             rank_info.m_text = kart->getController()->getName();
             if (race_manager->getKartGlobalPlayerId(i) > -1)
@@ -674,10 +674,6 @@ void LinearWorld::getKartsDisplayInfo(
                     rank_info.m_text += flag;
                 }
             }
-        }
-        else
-        {
-            rank_info.m_text = "";
         }
 
         int numLaps = race_manager->getNumLaps();
