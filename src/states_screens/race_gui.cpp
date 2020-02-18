@@ -40,6 +40,7 @@ using namespace irr;
 #include "guiengine/scalable_font.hpp"
 #include "io/file_manager.hpp"
 #include "items/powerup_manager.hpp"
+#include "items/powerup.hpp"
 #include "karts/abstract_kart.hpp"
 #include "karts/controller/controller.hpp"
 #include "karts/controller/spare_tire_ai.hpp"
@@ -703,6 +704,32 @@ void RaceGUI::drawGlobalMiniMap()
 
         draw2DImage(icon, position, source, NULL, NULL, true);
 
+        // show player's powerups in minimap
+        const Powerup* powerup = kart->getPowerup();
+        if (UserConfigParams::m_karts_powerup_gui &&
+            powerup->getType() != PowerupManager::POWERUP_NOTHING && !kart->hasFinishedRace())
+        {
+            video::ITexture *iconItem = powerup->getIcon()->getTexture();
+            assert(iconItem);
+            const core::rect<s32> posItem(m_map_left+(int)(draw_at.getX()),
+                                          lower_y   -(int)(draw_at.getY()),
+                                          m_map_left+(int)(draw_at.getX()+marker_half_size*3/2),
+                                          lower_y   -(int)(draw_at.getY()-marker_half_size*3/2));
+            const core::rect<s32> rect(core::position2d<s32>(0,0), iconItem->getSize());
+            draw2DImage(iconItem, posItem, rect, NULL, NULL, true);
+
+            int numberItems = kart->getPowerup()->getNum();
+            if (numberItems > 1)
+            {
+                gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
+                const core::rect<s32> posNumber(m_map_left+(int)(draw_at.getX()+marker_half_size),
+                                                lower_y   -(int)(draw_at.getY()-marker_half_size/2),
+                                                m_map_left+(int)(draw_at.getX()+marker_half_size*5/2),
+                                                lower_y   -(int)(draw_at.getY()-marker_half_size*4/2));
+                font->setScale(3.f*((float) marker_half_size)/(2.f*(float)font->getDimension(L"X").Height));
+                font->draw(StringUtils::toWString(numberItems), posNumber, video::SColor(255, 255, 255, 255));
+            }
+        }
     }   // for i<getNumKarts
 
     if (soccer_world)
