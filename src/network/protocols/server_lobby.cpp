@@ -5225,7 +5225,7 @@ void ServerLobby::handleServerCommand(Event* event,
     auto argv = StringUtils::split(cmd, ' ');
     if (argv.size() == 0)
         return;
-    if (argv[0] == "listserveraddon")
+    if (argv[0] == "listserveraddon" || argv[0] == "sls")
     {
         NetworkString* chat = getNetworkString();
         chat->addUInt8(LE_CHAT);
@@ -5302,7 +5302,7 @@ void ServerLobby::handleServerCommand(Event* event,
         peer->sendPacket(chat, true/*reliable*/);
         delete chat;
     }
-    else if (StringUtils::startsWith(cmd, "playerhasaddon"))
+    else if (StringUtils::startsWith(cmd, "playerhasaddon") || StringUtils::startsWith(cmd, "has"))
     {
         NetworkString* chat = getNetworkString();
         chat->addUInt8(LE_CHAT);
@@ -5391,7 +5391,7 @@ void ServerLobby::handleServerCommand(Event* event,
             player_peer->kick();
         }
     }
-    else if (StringUtils::startsWith(cmd, "playeraddonscore"))
+    else if (StringUtils::startsWith(cmd, "playeraddonscore") || StringUtils::startsWith(cmd, "score"))
     {
         NetworkString* chat = getNetworkString();
         chat->addUInt8(LE_CHAT);
@@ -5434,7 +5434,7 @@ void ServerLobby::handleServerCommand(Event* event,
         peer->sendPacket(chat, true/*reliable*/);
         delete chat;
     }
-    else if (argv[0] == "serverhasaddon")
+    else if (argv[0] == "serverhasaddon" || argv[0] == "shas")
     {
         NetworkString* chat = getNetworkString();
         chat->addUInt8(LE_CHAT);

@@ -1544,9 +1544,9 @@ void ClientLobby::handleClientCommand(const std::string& cmd)
     auto argv = StringUtils::split(cmd, ' ');
     if (argv.size() == 0)
         return;
-    if (argv[0] == "installaddon" && argv.size() == 2)
+    if ((argv[0] == "installaddon" || argv[0] == "install") && argv.size() == 2)
         AddonsPack::install(argv[1]);
-    else if (argv[0] == "uninstalladdon" && argv.size() == 2)
+    else if ((argv[0] == "uninstalladdon" || argv[0] == "uninstall") && argv.size() == 2)
         AddonsPack::uninstall(argv[1]);
     else if (argv[0] == "music" && argv.size() == 2)
     {
@@ -1569,7 +1569,7 @@ void ClientLobby::handleClientCommand(const std::string& cmd)
         else
             music_manager->setMasterMusicVolume((float)vol / 10);
     }
-    else if (argv[0] == "liststkaddon")
+    else if (argv[0] == "liststkaddon" || argv[0] == "ls")
     {
         if (argv.size() > 3)
         {
@@ -1620,7 +1620,7 @@ void ClientLobby::handleClientCommand(const std::string& cmd)
             }
         }
     }
-    else if (argv[0] == "listlocaladdon")
+    else if (argv[0] == "listlocaladdon" || argv[0] == "lls")
     {
         if (argv.size() > 3)
         {
