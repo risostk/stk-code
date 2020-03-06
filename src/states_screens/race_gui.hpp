@@ -91,6 +91,10 @@ private:
     /** Height of the digit font. */
     int              m_font_height;
 
+    /** new speedometer. */
+    float            m_speed_sum, m_final_speed_avg, m_final_distance;
+    uint64_t         m_speed_samples;
+
     /** Icon textures (stored as variables to not look up
         their location on every frame) */
     irr::video::ITexture *m_red_team;
