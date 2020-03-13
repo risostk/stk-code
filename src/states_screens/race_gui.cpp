@@ -59,6 +59,7 @@ using namespace irr;
 #include "utils/constants.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
+#include "karts/skidding.hpp"
 
 /** The constructor is called before anything is attached to the scene node.
  *  So rendering to a texture can be done here. But world is not yet fully
@@ -385,6 +386,9 @@ void RaceGUI::renderPlayerView(const Camera *camera, float dt)
 
     if (!m_is_tutorial)
         drawLap(kart, viewport, scaling);
+
+    // draw heading line
+    drawHeadingLine(kart,20);
 }   // renderPlayerView
 
 //-----------------------------------------------------------------------------
@@ -1394,3 +1398,26 @@ void RaceGUI::drawLap(const AbstractKart* kart,
 #endif
 } // drawLap
 
+void RaceGUI::drawHeadingLine(const AbstractKart* kart, float length)
+{
+#ifndef SERVER_ONLY
+    if (kart == NULL  || kart->hasFinishedRace()) return;
+    World* world = World::getWorld();
+    if (world->isGoalPhase()) return ;
+    SoccerWorld *soccer_world = dynamic_cast<SoccerWorld*>(world);
+    if (soccer_world)
+    {
+        Vec3 kart_front_xyz = kart->getFrontXYZ();
+        // heading direction
+        float theta = kart->getHeading();
+        Vec3 line_end_xyz = kart_front_xyz + Vec3(length*sinf(theta),kart_front_xyz.getY(),length*cosf(theta));
+        video::SColor line_color = video::SColor(255, 0, 255, 0);
+        draw3DLine( kart_front_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+        // visual skid direction
+        theta += kart->getSkidding()->getVisualSkidRotation();
+        line_end_xyz = kart_front_xyz + Vec3(length*sinf(theta),kart_front_xyz.getY(),length*cosf(theta));
+        line_color = video::SColor(255, 0, 100, 0);
+        draw3DLine( kart_front_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+    }
+#endif
+} // drawHeadingLine
