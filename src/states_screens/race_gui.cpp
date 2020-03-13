@@ -946,52 +946,52 @@ void RaceGUI::drawRank(const AbstractKart *kart,
 
     core::recti pos;
     pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 2.5f*meter_height));
-	pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 2.5f*meter_height));
+    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 2.5f*meter_height));
 
-	//static video::SColor color = video::SColor(255, 255, 255, 255);
-	if (RaceManager::get()->getNumberOfKarts() > 1)
-		font->draw(oss.str().c_str(), pos, color, true, true);
+    //static video::SColor color = video::SColor(255, 255, 255, 255);
+    if (RaceManager::get()->getNumberOfKarts() > 1)
+        font->draw(oss.str().c_str(), pos, color, true, true);
 
-	font->setScale(1.0f);
+    font->setScale(1.0f);
 
-	pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
-	pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
+    pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
+    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
 
-	std::ostringstream oss2;
-	oss2 << std::fixed << std::setprecision(1) << kart->getSpeed()/KILOMETERS_PER_HOUR;
+    std::ostringstream oss2;
+    oss2 << std::fixed << std::setprecision(1) << kart->getSpeed()/KILOMETERS_PER_HOUR;
 
-	font->draw(oss2.str().c_str(), pos, color, true, true);
+    font->draw(oss2.str().c_str(), pos, color, true, true);
 
-	font->setScale(0.4f);
-	pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
-	pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
-	if (!kart->hasFinishedRace())
+    font->setScale(0.4f);
+    pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
+    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
+    if (!kart->hasFinishedRace())
     {
-		m_final_speed_avg = 0.;
-		m_speed_sum += std::abs(kart->getSpeed()/KILOMETERS_PER_HOUR);
-		m_speed_samples++;
+        m_final_speed_avg = 0.;
+        m_speed_sum += std::abs(kart->getSpeed()/KILOMETERS_PER_HOUR);
+        m_speed_samples++;
 
-		float avg_speed(m_speed_sum/m_speed_samples);
-		std::ostringstream oss3;
-		oss3 << std::fixed << std::setprecision(1) << avg_speed << "/" << std::setprecision(3) << avg_speed*World::getWorld()->getTime()/3600;
-		font->draw(oss3.str().c_str(), pos, color, true, true);
-	}
-	else
+        float avg_speed(m_speed_sum/m_speed_samples);
+        std::ostringstream oss3;
+        oss3 << std::fixed << std::setprecision(1) << avg_speed << "/" << std::setprecision(3) << avg_speed*World::getWorld()->getTime()/3600;
+        font->draw(oss3.str().c_str(), pos, color, true, true);
+    }
+    else
     {
-		if (m_final_speed_avg == 0.)
+        if (m_final_speed_avg == 0.)
         {
-			m_final_speed_avg = m_speed_sum/m_speed_samples;
-			m_final_distance = m_final_speed_avg*World::getWorld()->getTime()/3600;
-			m_speed_sum = 0.;
-			m_speed_samples = 0;
-		}
+            m_final_speed_avg = m_speed_sum/m_speed_samples;
+            m_final_distance = m_final_speed_avg*World::getWorld()->getTime()/3600;
+            m_speed_sum = 0.;
+            m_speed_samples = 0;
+        }
 
-		std::ostringstream oss3;
-		oss3 << std::fixed << std::setprecision(1) << m_final_speed_avg << "/" << std::setprecision(3) << m_final_distance;
-		color = video::SColor(255, 0, 255, 0);
-		font->draw(oss3.str().c_str(), pos, color, true, true);
-		color = video::SColor(255, 255, 255, 255);
-	}
+        std::ostringstream oss3;
+        oss3 << std::fixed << std::setprecision(1) << m_final_speed_avg << "/" << std::setprecision(3) << m_final_distance;
+        color = video::SColor(255, 0, 255, 0);
+        font->draw(oss3.str().c_str(), pos, color, true, true);
+        color = video::SColor(255, 255, 255, 255);
+    }
     font->setScale(1.0f);
 }   // drawRank
 
