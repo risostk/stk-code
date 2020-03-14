@@ -1403,13 +1403,29 @@ void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
     pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
     pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
 
-
     if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
     {   // show ball speed in soccer
         SoccerWorld *soccer_world = dynamic_cast<SoccerWorld*>(World::getWorld());
         std::ostringstream oss3;
         oss3 << "ball " << std::fixed << std::setprecision(1) << soccer_world->getBallVelocity();
         font->draw(oss3.str().c_str(), pos, color, true, true);
+        // show own score
+        KartTeam cur_team = soccer_world->getKartTeam(kart->getWorldKartId());
+        KartTeam opp_team = (cur_team == KART_TEAM_BLUE ? KART_TEAM_RED : KART_TEAM_BLUE);
+        std::vector<SoccerWorld::ScorerData> scorers = soccer_world->getScorers(cur_team);
+        unsigned int goal=0, own_goal=0;
+        for (unsigned int i = 0; i < scorers.size(); i++)
+            if (scorers.at(i).m_player == kart->getController()->getName())
+                goal++;
+        scorers = soccer_world->getScorers(opp_team);
+        for (unsigned int i = 0; i < scorers.size(); i++)
+            if (scorers.at(i).m_player == kart->getController()->getName())
+                own_goal++;
+        pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.40f*meter_height));
+        pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.40f*meter_height));
+        std::ostringstream oss4;
+        oss4 << "goal " << goal << " - " << own_goal;
+        font->draw(oss4.str().c_str(), pos, color, true, true);
     }
     else if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE ||
              RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL ||
