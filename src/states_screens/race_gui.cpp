@@ -953,46 +953,6 @@ void RaceGUI::drawRank(const AbstractKart *kart,
         font->draw(oss.str().c_str(), pos, color, true, true);
 
     font->setScale(1.0f);
-
-    pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
-    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
-
-    std::ostringstream oss2;
-    oss2 << std::fixed << std::setprecision(1) << kart->getSpeed()/KILOMETERS_PER_HOUR;
-
-    font->draw(oss2.str().c_str(), pos, color, true, true);
-
-    font->setScale(0.4f);
-    pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
-    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
-    if (!kart->hasFinishedRace())
-    {
-        m_final_speed_avg = 0.;
-        m_speed_sum += std::abs(kart->getSpeed()/KILOMETERS_PER_HOUR);
-        m_speed_samples++;
-
-        float avg_speed(m_speed_sum/m_speed_samples);
-        std::ostringstream oss3;
-        oss3 << std::fixed << std::setprecision(1) << avg_speed << "/" << std::setprecision(3) << avg_speed*World::getWorld()->getTime()/3600;
-        font->draw(oss3.str().c_str(), pos, color, true, true);
-    }
-    else
-    {
-        if (m_final_speed_avg == 0.)
-        {
-            m_final_speed_avg = m_speed_sum/m_speed_samples;
-            m_final_distance = m_final_speed_avg*World::getWorld()->getTime()/3600;
-            m_speed_sum = 0.;
-            m_speed_samples = 0;
-        }
-
-        std::ostringstream oss3;
-        oss3 << std::fixed << std::setprecision(1) << m_final_speed_avg << "/" << std::setprecision(3) << m_final_distance;
-        color = video::SColor(255, 0, 255, 0);
-        font->draw(oss3.str().c_str(), pos, color, true, true);
-        color = video::SColor(255, 255, 255, 255);
-    }
-    font->setScale(1.0f);
 }   // drawRank
 
 //-----------------------------------------------------------------------------
@@ -1039,7 +999,7 @@ void RaceGUI::drawSpeedEnergyRank(const AbstractKart* kart,
     const float speed =  kart->getSpeed();
 
     drawRank(kart, offset, min_ratio, meter_width, meter_height, dt);
-
+    drawNumericSpeed(kart, offset, meter_width, meter_height);
 
     if(speed <=0) return;  // Nothing to do if speed is negative.
 
@@ -1421,3 +1381,68 @@ void RaceGUI::drawHeadingLine(const AbstractKart* kart, float length)
     }
 #endif
 } // drawHeadingLine
+
+// Draw the numeric speedometer
+void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
+                               const core::vector2df &offset,
+                               int meter_width, int meter_height)
+{
+    static video::SColor color = video::SColor(255, 255, 255, 255);
+    gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
+
+    core::recti pos;
+    pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
+    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
+
+    std::ostringstream oss2;
+    oss2 << std::fixed << std::setprecision(1) << kart->getSpeed(); // /KILOMETERS_PER_HOUR
+
+    font->draw(oss2.str().c_str(), pos, color, true, true);
+
+    font->setScale(0.4f);
+    pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
+    pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
+
+
+    if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
+    {   // show ball speed in soccer
+        SoccerWorld *soccer_world = dynamic_cast<SoccerWorld*>(World::getWorld());
+        std::ostringstream oss3;
+        oss3 << "ball " << std::fixed << std::setprecision(1) << soccer_world->getBallVelocity();
+        font->draw(oss3.str().c_str(), pos, color, true, true);
+    }
+    else if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE ||
+             RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL ||
+             RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER)
+    {   // show the average kart speed
+        if (!kart->hasFinishedRace())
+        {
+            m_final_speed_avg = 0.;
+            m_speed_sum += std::abs(kart->getSpeed()); // /KILOMETERS_PER_HOUR
+            m_speed_samples++;
+
+            float avg_speed(m_speed_sum/m_speed_samples);
+            std::ostringstream oss3;
+            oss3 << std::fixed << std::setprecision(1) << avg_speed << "/" << std::setprecision(3) << avg_speed*World::getWorld()->getTime()/3600;
+            font->draw(oss3.str().c_str(), pos, color, true, true);
+        }
+        else
+        {
+            if (m_final_speed_avg == 0.)
+            {
+                m_final_speed_avg = m_speed_sum/m_speed_samples;
+                m_final_distance = m_final_speed_avg*World::getWorld()->getTime()/3600;
+                m_speed_sum = 0.;
+                m_speed_samples = 0;
+            }
+
+            std::ostringstream oss3;
+            oss3 << std::fixed << std::setprecision(1) << m_final_speed_avg << "/" << std::setprecision(3) << m_final_distance;
+            color = video::SColor(255, 0, 255, 0);
+            font->draw(oss3.str().c_str(), pos, color, true, true);
+            color = video::SColor(255, 255, 255, 255);
+        }
+    }
+    // TODO: else show other useful information in CTF and FFA
+    font->setScale(1.0f);
+}

@@ -134,6 +134,9 @@ private:
                                 float min_ratio, int meter_width,
                                 int meter_height, float dt);
     void drawHeadingLine       (const AbstractKart* kart, float length);
+    void drawNumericSpeed      (const AbstractKart *kart,
+                                const core::vector2df &offset,
+                                int meter_width, int meter_height);
 
     /* Helper functions for drawing meters */
 

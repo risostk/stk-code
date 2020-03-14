@@ -183,8 +183,10 @@ public:
             m_ball_body->getLinearVelocity().z() == 0.0f);
     }
     // ------------------------------------------------------------------------
-    float getBallHeading() const
-                                                    { return m_ball_heading; }
+    float getBallHeading() const                     { return m_ball_heading; }
+    // ------------------------------------------------------------------------
+    btScalar getBallVelocity() const
+    {   return m_ball_body->getLinearVelocity().length();                     }
     // ------------------------------------------------------------------------
     float getBallDiameter() const;
     // ------------------------------------------------------------------------
