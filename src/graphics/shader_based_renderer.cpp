@@ -769,6 +769,33 @@ void ShaderBasedRenderer::render(float dt, bool is_loading)
         // Save projection-view matrix for the next frame
         camera->setPreviousPVMatrix(irr_driver->getProjViewMatrix());
 
+        for (auto const& scam: camera->getActiveChildrenCameras())
+        {
+            scene::ICameraSceneNode * const scamnode = scam->getCameraSceneNode();
+
+            scam->activate(!CVS->isDeferredEnabled());
+            rg->preRenderCallback(scam);   // adjusts start referee
+            irr_driver->getSceneManager()->setActiveCamera(scamnode);
+
+            computeMatrixesAndCameras(scamnode, m_rtts->getWidth(), m_rtts->getHeight());
+            if (CVS->isDeferredEnabled())
+            {
+                renderSceneDeferred(scamnode, dt, track->hasShadows(), false);
+            }
+            else
+            {
+                renderScene(scamnode, dt, track->hasShadows(), false);
+            }
+
+            if (CVS->isDeferredEnabled() && !is_loading)
+            {
+                renderPostProcessing(scam, false);
+            }
+
+            // Save projection-view matrix for the next frame
+            scam->setPreviousPVMatrix(irr_driver->getProjViewMatrix());
+        }
+
         PROFILER_POP_CPU_MARKER();
 
     }  // for i<world->getNumKarts()

@@ -81,6 +81,9 @@ Camera* Camera::createCamera(unsigned int index, CameraType type,
     {
     case CM_TYPE_NORMAL: camera = new CameraNormal(CM_TYPE_NORMAL, index, kart);
                                                                  break;
+    case CM_TYPE_MIRROR:
+                         camera = new CameraNormal(CM_TYPE_MIRROR, index, kart);
+                                                                 break;
     case CM_TYPE_DEBUG:  camera = new CameraDebug (index, kart); break;
     case CM_TYPE_FPS:    camera = new CameraFPS   (index, kart); break;
     case CM_TYPE_END:    camera = new CameraEnd   (index, kart); break;
@@ -169,8 +172,23 @@ void Camera::setKart(AbstractKart *new_kart)
 void Camera::setupCamera()
 {
     m_viewport = irr_driver->getSplitscreenWindow(m_index);
+    if (m_type == CM_TYPE_MIRROR)
+    {
+        float x = m_viewport.UpperLeftCorner.X;
+        float y = m_viewport.UpperLeftCorner.Y;
+        float w = m_viewport.getWidth();
+        float h = m_viewport.getHeight();
+        // left & right split top
+        m_viewport = core::recti( x+(w*0.25), y, x+(w*0.75), y+(h*0.25));
+
+        // left & right split bottom
+        // m_viewport = core::recti( x+(w*0.25), y+(h*0.75), x+(w*0.75), y+h);
+
+        // bottom
+        // m_viewport = core::recti(x, y+(h*0.6), x+(w*0.4), y+h);
+    }
     m_aspect = (float)((float)(m_viewport.getWidth()) / (float)(m_viewport.getHeight()));
-	
+
     m_scaling = core::vector2df(
         float(irr_driver->getActualScreenSize().Width) / m_viewport.getWidth() , 
         float(irr_driver->getActualScreenSize().Height) / m_viewport.getHeight());
@@ -190,6 +208,11 @@ void Camera::setupCamera()
  */
 void Camera::setMode(Mode mode)
 {
+    if (m_type == CM_TYPE_MIRROR)
+    {
+        m_mode = CM_REVERSE;
+        return;
+    }
     if (mode == m_mode) return;
     // If we switch from reverse view, move the camera immediately to the
     // correct position.
@@ -214,6 +237,10 @@ void Camera::setMode(Mode mode)
  */
 Camera::Mode Camera::getMode()
 {
+    if (m_type == CM_TYPE_MIRROR)
+    {
+        m_mode = CM_REVERSE;
+    }
     return m_mode;
 }   // getMode
 

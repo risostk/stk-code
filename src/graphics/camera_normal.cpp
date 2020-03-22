@@ -68,6 +68,11 @@ CameraNormal::CameraNormal(Camera::CameraType type,  int camera_index,
         btTransform btt = kart->getSmoothedTrans();
         m_kart_position = btt.getOrigin();
         m_kart_rotation = btt.getRotation();
+        if (type == CM_TYPE_NORMAL)
+        {
+            Camera *camera_mirror = new CameraNormal(CM_TYPE_MIRROR, 0, kart);
+            addChild(camera_mirror);
+        }
     }
 }   // Camera
 
@@ -316,6 +321,7 @@ void CameraNormal::update(float dt)
         core::vector3df current_target = (m_kart->getSmoothedXYZ().toIrrVector()
                                        +  core::vector3df(0, above_kart, 0));
         m_camera->setTarget(current_target);
+        setChildrenCam(false);
     }
     else // no kart animation
     {
@@ -323,6 +329,37 @@ void CameraNormal::update(float dt)
         bool  smoothing;
         getCameraSettings(&above_kart, &cam_angle, &side_way, &distance, &smoothing, &cam_roll_angle);
         positionCamera(dt, above_kart, cam_angle, side_way, distance, smoothing, cam_roll_angle);
+
+        World* world = World::getWorld();
+        World::KartList karts = world->getKarts();
+
+        bool set_child_cam=false;
+        if (karts.size()>1){
+            Vec3 kart_pos=m_kart->getXYZ();
+            // Find the direction a kart is moving in
+            btTransform trans = m_kart->getTrans();
+            Vec3 direction(trans.getBasis().getColumn(2));
+            Vec3 kart_posb=kart_pos+direction;
+            for (unsigned int i = 0; i < karts.size(); i++)
+            {
+                const AbstractKart *kart = karts[i].get();
+                if (kart == m_kart) continue;
+                Vec3 tmp_pos = kart->getXYZ();
+                Vec3 to_tmp = tmp_pos-kart_pos;
+                Vec3 to_tmpb = tmp_pos-kart_posb;
+                if ((to_tmpb.length() > to_tmp.length()) && (to_tmp.length()<50) &&
+                    (to_tmp.dot(to_tmpb) > to_tmpb.length()))
+                {
+                    set_child_cam=true;
+                    break;
+                }
+            }
+        }
+        setChildrenCam(set_child_cam);
+    }
+    for (auto const&  cam: getActiveChildrenCameras())
+    {
+        cam->update(dt);
     }
 }   // update
 

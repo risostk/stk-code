@@ -52,6 +52,7 @@ public:
     enum CameraType
     {
         CM_TYPE_NORMAL,
+        CM_TYPE_MIRROR,
         CM_TYPE_DEBUG,         //!< A debug camera.
         CM_TYPE_FPS,           //!< FPS Camera
         CM_TYPE_END            //!< End camera
@@ -126,6 +127,9 @@ protected:
     *  May be NULL (example: cutscene camera)
     */
     AbstractKart   *m_kart;
+
+    std::vector<Camera*> m_children_cameras;
+    std::vector<bool> m_children_cameras_toggle;
 
     static Camera* createCamera(unsigned int index, CameraType type,
                                 AbstractKart* kart);
@@ -220,6 +224,33 @@ public:
     // ------------------------------------------------------------------------
     /** Returns the scaling in x/y direction for this camera. */
     const core::vector2df& getScaling() const {return m_scaling; }
+
+    void setChildrenCam(bool val)
+    {
+        for (int i=0; i<(int)m_children_cameras.size(); i++)
+        {
+            m_children_cameras_toggle[i] = val;
+        }
+    }
+    bool isChildrenToggle(int i) { return m_children_cameras_toggle[i]; }
+    std::vector<Camera*> getChildrenCameras() { return m_children_cameras; }
+    std::vector<Camera*> getActiveChildrenCameras()
+    {
+        std::vector<Camera*> result;
+        for (int i=0; i<(int)m_children_cameras.size(); i++)
+        {
+            if (m_children_cameras_toggle[i])
+            {
+                result.push_back(m_children_cameras[i]);
+            }
+        }
+        return result;
+    }
+    void addChild(Camera* scam)
+    {
+        m_children_cameras.push_back(scam);
+        m_children_cameras_toggle.push_back(false);
+    }
 
     // ------------------------------------------------------------------------
     /** Returns the camera scene node. */
