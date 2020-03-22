@@ -179,7 +179,7 @@ void Camera::setupCamera()
         float w = m_viewport.getWidth();
         float h = m_viewport.getHeight();
         // left & right split top
-        m_viewport = core::recti( x+(w*0.25), y, x+(w*0.75), y+(h*0.25));
+        m_viewport = core::recti( x+(w*0.15), y, x+(w*0.55), y+(h*0.25));
 
         // left & right split bottom
         // m_viewport = core::recti( x+(w*0.25), y+(h*0.75), x+(w*0.75), y+h);

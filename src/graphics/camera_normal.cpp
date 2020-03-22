@@ -334,21 +334,22 @@ void CameraNormal::update(float dt)
         World::KartList karts = world->getKarts();
 
         bool set_child_cam=false;
-        if (karts.size()>1){
-            Vec3 kart_pos=m_kart->getXYZ();
+        if (karts.size()>1)
+        {
             // Find the direction a kart is moving in
             btTransform trans = m_kart->getTrans();
             Vec3 direction(trans.getBasis().getColumn(2));
-            Vec3 kart_posb=kart_pos+direction;
             for (unsigned int i = 0; i < karts.size(); i++)
             {
                 const AbstractKart *kart = karts[i].get();
                 if (kart == m_kart) continue;
-                Vec3 tmp_pos = kart->getXYZ();
-                Vec3 to_tmp = tmp_pos-kart_pos;
-                Vec3 to_tmpb = tmp_pos-kart_posb;
-                if ((to_tmpb.length() > to_tmp.length()) && (to_tmp.length()<50) &&
-                    (to_tmp.dot(to_tmpb) > to_tmpb.length()))
+                // other kart's position in kart's location coordinates
+                Vec3 tmp_pos = trans.inverse()(kart->getXYZ());
+                // other kart's direction
+                Vec3 tmp_dir = kart->getTrans().getBasis().getColumn(2);
+                if (tmp_pos.getX()>-10 && tmp_pos.getX()<10 &&
+                    tmp_pos.getZ()>-50 && tmp_pos.getZ()< 0 && // behind kart
+                    direction.dot(tmp_dir)>0) // same direction
                 {
                     set_child_cam=true;
                     break;
