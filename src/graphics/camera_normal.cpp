@@ -230,7 +230,7 @@ void CameraNormal::getCameraSettings(float *above_kart, float *cam_angle,
             *above_kart = 0.75f;
             *cam_angle  = kp->getCameraBackwardUpAngle() * DEGREE_TO_RAD;
             *sideway    = 0;
-            *distance   = 2.0f*m_distance;
+            *distance   = (getType()==CM_TYPE_MIRROR ? 1.0f : 2.0f)*m_distance;
             *smoothing  = false;
             *cam_roll_angle = 0.0f;
             if (UserConfigParams::m_multitouch_controls == MULTITOUCH_CONTROLS_GYROSCOPE)
@@ -333,6 +333,7 @@ void CameraNormal::update(float dt)
         World* world = World::getWorld();
         World::KartList karts = world->getKarts();
 
+        /*
         bool set_child_cam=false;
         if (karts.size()>1)
         {
@@ -357,6 +358,8 @@ void CameraNormal::update(float dt)
             }
         }
         setChildrenCam(set_child_cam);
+        */
+       setChildrenCam(true);
     }
     for (auto const&  cam: getActiveChildrenCameras())
     {

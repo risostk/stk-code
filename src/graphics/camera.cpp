@@ -172,6 +172,7 @@ void Camera::setKart(AbstractKart *new_kart)
 void Camera::setupCamera()
 {
     m_viewport = irr_driver->getSplitscreenWindow(m_index);
+    float fov_factor=1.0f;
     if (m_type == CM_TYPE_MIRROR)
     {
         float x = m_viewport.UpperLeftCorner.X;
@@ -179,13 +180,15 @@ void Camera::setupCamera()
         float w = m_viewport.getWidth();
         float h = m_viewport.getHeight();
         // left & right split top
-        m_viewport = core::recti( x+(w*0.15), y, x+(w*0.55), y+(h*0.25));
+        m_viewport = core::recti( x+(w*0.15), y+h*(0.01), x+(w*0.55), y+(h*0.21));
 
         // left & right split bottom
         // m_viewport = core::recti( x+(w*0.25), y+(h*0.75), x+(w*0.75), y+h);
 
         // bottom
         // m_viewport = core::recti(x, y+(h*0.6), x+(w*0.4), y+h);
+
+        fov_factor=0.5;
     }
     m_aspect = (float)((float)(m_viewport.getWidth()) / (float)(m_viewport.getHeight()));
 
@@ -193,7 +196,7 @@ void Camera::setupCamera()
         float(irr_driver->getActualScreenSize().Width) / m_viewport.getWidth() , 
         float(irr_driver->getActualScreenSize().Height) / m_viewport.getHeight());
 
-    m_fov = DEGREE_TO_RAD * stk_config->m_camera_fov
+    m_fov = fov_factor * DEGREE_TO_RAD * stk_config->m_camera_fov
         [RaceManager::get()->getNumLocalPlayers() > 0 ?
         RaceManager::get()->getNumLocalPlayers() - 1 : 0];
 
