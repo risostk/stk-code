@@ -32,6 +32,7 @@
 #include "karts/kart_properties.hpp"
 #include "karts/skidding.hpp"
 #include "tracks/track.hpp"
+#include "network/protocols/client_lobby.hpp"
 
 // ============================================================================
 /** Constructor for the normal camera. This is the only camera constructor
@@ -359,7 +360,10 @@ void CameraNormal::update(float dt)
         }
         setChildrenCam(set_child_cam);
         */
-       setChildrenCam(true);
+        auto cl = LobbyProtocol::get<ClientLobby>();
+        // only show mirror if kart has not finished race or not spectator
+        if (!m_kart->hasFinishedRace() && !cl->isSpectator())
+            setChildrenCam(true);
     }
     for (auto const&  cam: getActiveChildrenCameras())
     {
