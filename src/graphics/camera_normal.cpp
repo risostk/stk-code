@@ -33,6 +33,7 @@
 #include "karts/skidding.hpp"
 #include "tracks/track.hpp"
 #include "network/protocols/client_lobby.hpp"
+#include "network/network_config.hpp"
 
 // ============================================================================
 /** Constructor for the normal camera. This is the only camera constructor
@@ -334,36 +335,13 @@ void CameraNormal::update(float dt)
         World* world = World::getWorld();
         World::KartList karts = world->getKarts();
 
-        /*
-        bool set_child_cam=false;
-        if (karts.size()>1)
-        {
-            // Find the direction a kart is moving in
-            btTransform trans = m_kart->getTrans();
-            Vec3 direction(trans.getBasis().getColumn(2));
-            for (unsigned int i = 0; i < karts.size(); i++)
-            {
-                const AbstractKart *kart = karts[i].get();
-                if (kart == m_kart) continue;
-                // other kart's position in kart's location coordinates
-                Vec3 tmp_pos = trans.inverse()(kart->getXYZ());
-                // other kart's direction
-                Vec3 tmp_dir = kart->getTrans().getBasis().getColumn(2);
-                if (tmp_pos.getX()>-10 && tmp_pos.getX()<10 &&
-                    tmp_pos.getZ()>-50 && tmp_pos.getZ()< 0 && // behind kart
-                    direction.dot(tmp_dir)>0) // same direction
-                {
-                    set_child_cam=true;
-                    break;
-                }
-            }
-        }
-        setChildrenCam(set_child_cam);
-        */
-        auto cl = LobbyProtocol::get<ClientLobby>();
         // only show mirror if kart has not finished race or not spectator
-        if (!m_kart->hasFinishedRace() && !cl->isSpectator())
+        if (!m_kart->hasFinishedRace())
+        {
             setChildrenCam(true);
+            if (NetworkConfig::get()->isNetworking() && LobbyProtocol::get<ClientLobby>()->isSpectator())
+                setChildrenCam(false);
+        }
     }
     for (auto const&  cam: getActiveChildrenCameras())
     {
