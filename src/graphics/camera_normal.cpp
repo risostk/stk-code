@@ -229,8 +229,8 @@ void CameraNormal::getCameraSettings(float *above_kart, float *cam_angle,
         }   // CM_FALLING
     case CM_REVERSE: // Same as CM_NORMAL except it looks backwards
         {
-            *above_kart = 0.75f;
-            *cam_angle  = kp->getCameraBackwardUpAngle() * DEGREE_TO_RAD;
+            *above_kart = (getType()==CM_TYPE_MIRROR ? 1.0f : 0.75f);
+            *cam_angle  = (getType()==CM_TYPE_MIRROR ? -2.0f : kp->getCameraBackwardUpAngle())*DEGREE_TO_RAD;
             *sideway    = 0;
             *distance   = (getType()==CM_TYPE_MIRROR ? 1.0f : 2.0f)*m_distance;
             *smoothing  = false;
