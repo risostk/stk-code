@@ -710,7 +710,8 @@ void RaceGUI::drawGlobalMiniMap()
         }   // if isPlayerController
 
         // icon squash with kart squash
-        if (!kart->getKartAnimation() && kart->isSquashed() )
+        if (UserConfigParams::m_karts_powerup_gui &&
+            !kart->getKartAnimation() && kart->isSquashed() )
         {
             core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size),   // left
                                     lower_y   -(int)(draw_at.getY()+marker_half_size/2), // upper
