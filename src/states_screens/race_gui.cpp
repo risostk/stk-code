@@ -41,6 +41,7 @@ using namespace irr;
 #include "io/file_manager.hpp"
 #include "items/powerup_manager.hpp"
 #include "items/powerup.hpp"
+#include "items/attachment_manager.hpp"
 #include "karts/abstract_kart.hpp"
 #include "karts/controller/controller.hpp"
 #include "karts/controller/spare_tire_ai.hpp"
@@ -711,10 +712,10 @@ void RaceGUI::drawGlobalMiniMap()
         // icon squash with kart squash
         if (!kart->getKartAnimation() && kart->isSquashed() )
         {
-            core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size),
-                                    lower_y   -(int)(draw_at.getY()+marker_half_size/2),
-                                    m_map_left+(int)(draw_at.getX()+marker_half_size),
-                                    lower_y   -(int)(draw_at.getY()-marker_half_size/2));
+            core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size),   // left
+                                    lower_y   -(int)(draw_at.getY()+marker_half_size/2), // upper
+                                    m_map_left+(int)(draw_at.getX()+marker_half_size),   // right
+                                    lower_y   -(int)(draw_at.getY()-marker_half_size/2));// lower
             draw2DImage(icon, pos_tmp, source, NULL, NULL, true);
         }
         else
@@ -729,10 +730,10 @@ void RaceGUI::drawGlobalMiniMap()
         {
             video::ITexture *iconItem = powerup->getIcon()->getTexture();
             assert(iconItem);
-            const core::rect<s32> posItem(m_map_left+(int)(draw_at.getX()),
-                                          lower_y   -(int)(draw_at.getY()),
-                                          m_map_left+(int)(draw_at.getX()+marker_half_size*3/2),
-                                          lower_y   -(int)(draw_at.getY()-marker_half_size*3/2));
+            const core::rect<s32> posItem(m_map_left+(int)(draw_at.getX()), // left
+                                          lower_y   -(int)(draw_at.getY()), // upper
+                                          m_map_left+(int)(draw_at.getX()+marker_half_size*3/2),  // right
+                                          lower_y   -(int)(draw_at.getY()-marker_half_size*3/2)); // lower
             const core::rect<s32> rect(core::position2d<s32>(0,0), iconItem->getSize());
             draw2DImage(iconItem, posItem, rect, NULL, NULL, true);
 
@@ -740,14 +741,32 @@ void RaceGUI::drawGlobalMiniMap()
             if (numberItems > 1)
             {
                 gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
-                const core::rect<s32> posNumber(m_map_left+(int)(draw_at.getX()+marker_half_size),
-                                                lower_y   -(int)(draw_at.getY()-marker_half_size/2),
-                                                m_map_left+(int)(draw_at.getX()+marker_half_size*5/2),
-                                                lower_y   -(int)(draw_at.getY()-marker_half_size*4/2));
+                const core::rect<s32> posNumber(m_map_left+(int)(draw_at.getX()+marker_half_size),     // left
+                                                lower_y   -(int)(draw_at.getY()-marker_half_size/2),   // upper
+                                                m_map_left+(int)(draw_at.getX()+marker_half_size*5/2), // right
+                                                lower_y   -(int)(draw_at.getY()-marker_half_size*4/2));// lower
                 font->setScale(3.f*((float) marker_half_size)/(2.f*(float)font->getDimension(L"X").Height));
                 font->draw(StringUtils::toWString(numberItems), posNumber, video::SColor(255, 255, 255, 255));
             }
         }
+        // show player's attachment
+        if (UserConfigParams::m_karts_powerup_gui &&
+            kart->getAttachment()->getType() != Attachment::ATTACH_NOTHING)
+        {
+            video::ITexture *icon_attachment =
+            attachment_manager->getIcon(kart->getAttachment()->getType())
+            ->getTexture();
+            if (icon_attachment != NULL)
+            {
+                const core::rect<s32> posAttach(m_map_left+(int)(draw_at.getX()-marker_half_size*3/2), // left
+                                                lower_y   -(int)(draw_at.getY()+marker_half_size*3/2), // upper
+                                                m_map_left+(int)(draw_at.getX()),  // right
+                                                lower_y   -(int)(draw_at.getY())); // lower
+                const core::rect<s32> rect(core::position2d<s32>(0,0), icon_attachment->getSize());
+                draw2DImage(icon_attachment, posAttach, rect, NULL, NULL, true);
+            }
+        }
+
     }   // for i<getNumKarts
 
     if (soccer_world)
