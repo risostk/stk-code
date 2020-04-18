@@ -356,6 +356,24 @@ void SoccerWorld::reset(bool restart)
     if (UserConfigParams::m_arena_ai_stats)
         getKart(8)->flyUp();
 
+    // Team will remain unchanged even with live join
+    std::vector<int> red_id, blue_id;
+    for (unsigned int i = 0; i < m_karts.size(); i++)
+    {
+        if (getKartTeam(i) == KART_TEAM_RED)
+            red_id.push_back(i);
+        else
+            blue_id.push_back(i);
+    }
+
+    m_team_icon_draw_id.resize(getNumKarts());
+    if (!Track::getCurrentTrack()->getMinimapInvert())
+        std::swap(red_id, blue_id);
+    int pos = 0;
+    for (int id : red_id)
+        m_team_icon_draw_id[pos++] = id;
+    for (int id : blue_id)
+        m_team_icon_draw_id[pos++] = id;
 }   // reset
 
 //-----------------------------------------------------------------------------
@@ -434,6 +452,23 @@ void SoccerWorld::update(int ticks)
     if (UserConfigParams::m_arena_ai_stats)
         m_frame_count++;
 
+    // FIXME before next release always update soccer kart position to fix
+    // powerup random number
+    /*beginSetKartPositions();
+    int pos = 1;
+    for (unsigned i = 0; i < getNumKarts(); i++)
+    {
+        if (getKart(i)->isEliminated())
+            continue;
+        setKartPosition(i, pos++);
+    }
+    for (unsigned i = 0; i < getNumKarts(); i++)
+    {
+        if (!getKart(i)->isEliminated())
+            continue;
+        setKartPosition(i, pos++);
+    }
+    endSetKartPositions();*/
 }   // update
 
 //-----------------------------------------------------------------------------
@@ -1059,3 +1094,31 @@ Vec3 SoccerWorld::getBallAimPosition(KartTeam team, bool reverse) const
 {
     return m_bgd->getAimPosition(team, reverse);
 }   // getBallAimPosition
+
+// ----------------------------------------------------------------------------
+/** Returns the data to display in the race gui.
+ */
+void SoccerWorld::getKartsDisplayInfo(
+                           std::vector<RaceGUIBase::KartIconDisplayInfo> *info)
+{
+    const unsigned int kart_amount = getNumKarts();
+    for (unsigned int i = 0; i < kart_amount ; i++)
+    {
+        RaceGUIBase::KartIconDisplayInfo& rank_info = (*info)[i];
+        rank_info.lap = -1;
+        rank_info.m_outlined_font = true;
+        rank_info.m_color = getKartTeam(i) == KART_TEAM_RED ?
+            video::SColor(255, 255, 0, 0) : video::SColor(255, 0, 0, 255);
+        rank_info.m_text = getKart(i)->getController()->getName();
+        if (RaceManager::get()->getKartGlobalPlayerId(i) > -1)
+        {
+            const core::stringw& flag = StringUtils::getCountryFlag(
+                RaceManager::get()->getKartInfo(i).getCountryCode());
+            if (!flag.empty())
+            {
+                rank_info.m_text += L" ";
+                rank_info.m_text += flag;
+            }
+        }
+    }
+}   // getKartsDisplayInfo

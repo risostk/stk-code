@@ -95,8 +95,13 @@ RaceGUIBase::RaceGUIBase()
 
     //read frame picture for icons in the mini map.
     m_icons_frame = irr_driver->getTexture("icons-frame_arrow.png");
-
+    m_icons_kart_list = irr_driver->getTexture("icons-frame.png");
     if (!m_icons_frame)
+    {
+        Log::error("RaceGuiBase",
+                   "Can't find 'icons-frame.png' texture, aborting.");
+    }
+    if (!m_icons_kart_list)
     {
         Log::error("RaceGuiBase",
                    "Can't find 'icons-frame.png' texture, aborting.");
@@ -751,11 +756,7 @@ void RaceGUIBase::drawGlobalReadySetGo()
 void RaceGUIBase::drawGlobalPlayerIcons(int bottom_margin)
 {
 #ifndef SERVER_ONLY
-    // For now, don't draw player icons when in soccer mode
     const RaceManager::MinorRaceModeType  minor_mode = RaceManager::get()->getMinorMode();
-    if(minor_mode == RaceManager::MINOR_MODE_SOCCER)
-        return;
-
     int x_base = 10;
     if (irr_driver->getDevice()->getLeftPadding() > 0)
         x_base += irr_driver->getDevice()->getLeftPadding();
@@ -840,7 +841,7 @@ void RaceGUIBase::drawGlobalPlayerIcons(int bottom_margin)
 
     for(int position = 1; position <= (int)kart_amount ; position++)
     {
-        AbstractKart *kart = world->getKartAtPosition(position);
+        AbstractKart *kart = world->getKartAtDrawingPosition(position);
 
         if (kart->getPosition() == -1)//if position is not set
         {
@@ -860,7 +861,8 @@ void RaceGUIBase::drawGlobalPlayerIcons(int bottom_margin)
         if (minor_mode==RaceManager::MINOR_MODE_3_STRIKES ||
             minor_mode==RaceManager::MINOR_MODE_FREE_FOR_ALL ||
             minor_mode==RaceManager::MINOR_MODE_CAPTURE_THE_FLAG ||
-            minor_mode==RaceManager::MINOR_MODE_EASTER_EGG)
+            minor_mode==RaceManager::MINOR_MODE_EASTER_EGG ||
+            minor_mode==RaceManager::MINOR_MODE_SOCCER)
         {
             x = x_base;
             y = previous_y+ICON_PLAYER_WIDTH+2;
@@ -1033,7 +1035,7 @@ void RaceGUIBase::drawPlayerIcon(AbstractKart *kart, int x, int y, int w,
     const core::rect<s32> pos(x, y, x+w, y+w);
 
     //to bring to light the player's icon: add a background
-    if (is_local && m_icons_frame != NULL)
+    if (is_local && m_icons_kart_list != NULL)
     {
         video::SColor colors[4];
         for (unsigned int i=0;i<4;i++)
@@ -1043,8 +1045,8 @@ void RaceGUIBase::drawPlayerIcon(AbstractKart *kart, int x, int y, int w,
                                100+(int)(100*cosf(M_PI/2*i+World::getWorld()->getTime()*2)));
         }
         const core::rect<s32> rect(core::position2d<s32>(0,0),
-                                   m_icons_frame->getSize());
-        draw2DImage(m_icons_frame, pos, rect,NULL, colors, true);
+                                   m_icons_kart_list->getSize());
+        draw2DImage(m_icons_kart_list, pos, rect,NULL, colors, true);
     }
 
     // Fixes crash bug, why are certain icons not showing up?
