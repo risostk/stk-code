@@ -669,7 +669,7 @@ void RaceGUI::drawGlobalMiniMap()
 
         bool has_teams = (ctf_world || soccer_world);
         
-        // Highlight the player icons with some backgorund image.
+        // Highlight the player icons with some background image.
         if ((has_teams || is_local) && m_icons_frame != NULL)
         {
             video::SColor color = kart->getKartProperties()->getColor();
@@ -708,7 +708,19 @@ void RaceGUI::drawGlobalMiniMap()
 
         }   // if isPlayerController
 
-        draw2DImage(icon, position, source, NULL, NULL, true);
+        // icon squash with kart squash
+        if (!kart->getKartAnimation() && kart->isSquashed() )
+        {
+            core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size),
+                                    lower_y   -(int)(draw_at.getY()+marker_half_size/2),
+                                    m_map_left+(int)(draw_at.getX()+marker_half_size),
+                                    lower_y   -(int)(draw_at.getY()-marker_half_size/2));
+            draw2DImage(icon, pos_tmp, source, NULL, NULL, true);
+        }
+        else
+        {
+            draw2DImage(icon, position, source, NULL, NULL, true);
+        }
 
         // show player's powerups in minimap
         const Powerup* powerup = kart->getPowerup();

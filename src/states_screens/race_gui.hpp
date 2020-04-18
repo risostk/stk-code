@@ -119,7 +119,7 @@ private:
 
     bool m_is_tutorial;
 
-    /* Display informat for one player on the screen. */
+    /* Display information for one player on the screen. */
     void drawEnergyMeter       (int x, int y, const AbstractKart *kart,
                                 const core::recti &viewport,
                                 const core::vector2df &scaling);
