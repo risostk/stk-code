@@ -624,12 +624,7 @@ void RaceGUI::drawGlobalMiniMap()
         for (unsigned i = 0; i < itm->getNumberOfItems(); i++)
         {
             ItemState* it = itm->getItem(i);
-            if (it != NULL && (
-                it->getType() == Item::ITEM_BONUS_BOX ||
-                it->getType() == Item::ITEM_BANANA ||
-                it->getType() == Item::ITEM_NITRO_BIG ||
-                it->getType() == Item::ITEM_NITRO_SMALL ||
-                it->getType() == Item::ITEM_BUBBLEGUM))
+            if (it != NULL) //&& it->getType() != Item::ITEM_EASTER_EGG // hide easter egg
             {
                 video::ITexture *icon_item = itm->getIcon(it->getType())->getTexture();
                 assert(icon_item);
