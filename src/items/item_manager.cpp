@@ -183,7 +183,7 @@ ItemManager::ItemManager()
     m_all_icons[ItemState::ITEM_NITRO_SMALL] = material_manager->getMaterial(icon_file,true,true);
     icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/bubblegum-icon.png");
     m_all_icons[ItemState::ITEM_BUBBLEGUM] = material_manager->getMaterial(icon_file,true,true);
-    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/main_help.png");
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/bubblegum-icon.png");
     m_all_icons[ItemState::ITEM_BUBBLEGUM_NOLOK] = material_manager->getMaterial(icon_file,true,true);
     icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/main_help.png");
     m_all_icons[ItemState::ITEM_EASTER_EGG] = material_manager->getMaterial(icon_file,true,true);

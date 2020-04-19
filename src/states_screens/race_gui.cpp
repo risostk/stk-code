@@ -617,7 +617,8 @@ void RaceGUI::drawGlobalMiniMap()
     }
 
     // show items and nitros on minimap
-    if (soccer_world) // bug with new bubblegum, so right now soccer only
+    if (UserConfigParams::m_karts_powerup_gui &&
+        soccer_world) // bug with new bubblegum, so right now soccer only
     {
         ItemManager* itm = track->getItemManager();
         int marker_half_size = m_minimap_ai_size>>1;
