@@ -22,6 +22,7 @@
 #include "config/user_config.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/sp/sp_base.hpp"
+#include "graphics/material_manager.hpp"
 #include "io/file_manager.hpp"
 #include "karts/abstract_kart.hpp"
 #include "karts/controller/spare_tire_ai.hpp"
@@ -169,6 +170,24 @@ ItemManager::ItemManager()
     {
         m_items_in_quads = NULL;
     }
+
+    // load item icons
+    std::string icon_file("");
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/gift.png");
+    m_all_icons[ItemState::ITEM_BONUS_BOX] = material_manager->getMaterial(icon_file,true,true);
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/banana_minimap.png"); // some bug using banana.png
+    m_all_icons[ItemState::ITEM_BANANA] = material_manager->getMaterial(icon_file,true,true);
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/nitro_big.png");
+    m_all_icons[ItemState::ITEM_NITRO_BIG] = material_manager->getMaterial(icon_file,true,true);
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/nitro.png");
+    m_all_icons[ItemState::ITEM_NITRO_SMALL] = material_manager->getMaterial(icon_file,true,true);
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/bubblegum-icon.png");
+    m_all_icons[ItemState::ITEM_BUBBLEGUM] = material_manager->getMaterial(icon_file,true,true);
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/main_help.png");
+    m_all_icons[ItemState::ITEM_BUBBLEGUM_NOLOK] = material_manager->getMaterial(icon_file,true,true);
+    icon_file = GUIEngine::getSkin()->getThemedIcon("gui/icons/main_help.png");
+    m_all_icons[ItemState::ITEM_EASTER_EGG] = material_manager->getMaterial(icon_file,true,true);
+
 }   // ItemManager
 
 //-----------------------------------------------------------------------------

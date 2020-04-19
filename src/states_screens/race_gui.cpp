@@ -42,6 +42,7 @@ using namespace irr;
 #include "items/powerup_manager.hpp"
 #include "items/powerup.hpp"
 #include "items/attachment_manager.hpp"
+#include "items/item_manager.hpp"
 #include "karts/abstract_kart.hpp"
 #include "karts/controller/controller.hpp"
 #include "karts/controller/spare_tire_ai.hpp"
@@ -613,6 +614,39 @@ void RaceGUI::drawGlobalMiniMap()
                                  m_map_left+(int)(draw_at.getX()+(m_minimap_player_size/1.4f)),
                                  lower_y   -(int)(draw_at.getY()-(m_minimap_player_size/2.2f)));
         draw2DImage(m_blue_flag, bp, bs, NULL, NULL, true);
+    }
+
+    // show items and nitros on minimap
+    if (soccer_world) // bug with new bubblegum, so right now soccer only
+    {
+        ItemManager* itm = track->getItemManager();
+        int marker_half_size = m_minimap_ai_size>>1;
+        for (unsigned i = 0; i < itm->getNumberOfItems(); i++)
+        {
+            ItemState* it = itm->getItem(i);
+            if (it->getType() == Item::ITEM_BONUS_BOX ||
+                it->getType() == Item::ITEM_BANANA ||
+                it->getType() == Item::ITEM_NITRO_BIG ||
+                it->getType() == Item::ITEM_NITRO_SMALL ||
+                it->getType() == Item::ITEM_BUBBLEGUM)
+            {
+                video::ITexture *icon_item = itm->getIcon(it->getType())->getTexture();
+                assert(icon_item);
+                if (icon_item != NULL)
+                {
+                    const Vec3& xyz = it->getXYZ().toIrrVector();
+                    Vec3 draw_at;
+                    track->mapPoint2MiniMap(xyz, &draw_at);
+                    // make item icon half the player icon size, otherwise too busy
+                    core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size/2), // left
+                                            lower_y   -(int)(draw_at.getY()+marker_half_size/2), // upper
+                                            m_map_left+(int)(draw_at.getX()+marker_half_size/2), // right
+                                            lower_y   -(int)(draw_at.getY()-marker_half_size/2));// lower
+                    core::rect<s32> source(core::position2di(0, 0), icon_item->getSize());
+                    draw2DImage(icon_item, pos_tmp, source, NULL, NULL, true);
+                }
+            }
+        }
     }
 
     AbstractKart* target_kart = NULL;

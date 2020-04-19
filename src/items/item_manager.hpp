@@ -39,6 +39,7 @@
 
 class Kart;
 class STKPeer;
+class Material;
 
 /**
   * \ingroup items
@@ -47,6 +48,10 @@ class ItemManager : public NoCopy
 {
     // Some static data and functions to initialise it:
 private:
+
+    /** The icon for each items. */
+    Material*     m_all_icons [Item::ITEM_COUNT];
+
     /** Stores the glow color for all items. */
     static std::vector<video::SColorf> m_glow_color;
 
@@ -72,7 +77,7 @@ public:
 
     // ------------------------------------------------------------------------
 
-    /** Disable item collection, useful to test client mispreditions or
+    /** Disable item collection, useful to test client mis-predictions or
      *  client/server disagreements. */
     static void disableItemCollection()
     {
@@ -199,6 +204,9 @@ public:
     }   // getFirstItemInQuad
     // ------------------------------------------------------------------------
     unsigned int insertItem(Item *item);
+    // ------------------------------------------------------------------------
+    /** Returns the icon(material) for an item. */
+    Material* getIcon(int type) const {return m_all_icons [type];}
 };   // ItemManager
 
 #endif
