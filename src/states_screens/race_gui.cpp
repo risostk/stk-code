@@ -617,19 +617,19 @@ void RaceGUI::drawGlobalMiniMap()
     }
 
     // show items and nitros on minimap
-    if (UserConfigParams::m_karts_powerup_gui &&
-        soccer_world) // bug with new bubblegum, so right now soccer only
+    if (UserConfigParams::m_karts_powerup_gui)
     {
         ItemManager* itm = track->getItemManager();
         int marker_half_size = m_minimap_ai_size>>1;
         for (unsigned i = 0; i < itm->getNumberOfItems(); i++)
         {
             ItemState* it = itm->getItem(i);
-            if (it->getType() == Item::ITEM_BONUS_BOX ||
+            if (it != NULL && (
+                it->getType() == Item::ITEM_BONUS_BOX ||
                 it->getType() == Item::ITEM_BANANA ||
                 it->getType() == Item::ITEM_NITRO_BIG ||
                 it->getType() == Item::ITEM_NITRO_SMALL ||
-                it->getType() == Item::ITEM_BUBBLEGUM)
+                it->getType() == Item::ITEM_BUBBLEGUM))
             {
                 video::ITexture *icon_item = itm->getIcon(it->getType())->getTexture();
                 assert(icon_item);
