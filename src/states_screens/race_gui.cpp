@@ -1431,20 +1431,23 @@ void RaceGUI::drawHeadingLine(const AbstractKart* kart, float length)
     if (kart == NULL  || kart->hasFinishedRace()) return;
     World* world = World::getWorld();
     if (world->isGoalPhase()) return ;
-    SoccerWorld *soccer_world = dynamic_cast<SoccerWorld*>(world);
-    if (soccer_world)
+    // only show the line in soccer, FFA, and CTF
+    if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_3_STRIKES ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_SOCCER ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FREE_FOR_ALL ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_CAPTURE_THE_FLAG)
     {
         Vec3 kart_front_xyz = kart->getFrontXYZ();
         // heading direction
         float theta = kart->getHeading();
-        Vec3 line_end_xyz = kart_front_xyz + Vec3(length*sinf(theta),kart_front_xyz.getY(),length*cosf(theta));
+        Vec3 line_end_xyz = kart_front_xyz + Vec3(length*sinf(theta),0.0,length*cosf(theta));
         video::SColor line_color = video::SColor(255, 0, 255, 0);
-        draw3DLine( kart_front_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+        draw3DLine(kart_front_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
         // visual skid direction
         theta += kart->getSkidding()->getVisualSkidRotation();
-        line_end_xyz = kart_front_xyz + Vec3(length*sinf(theta),kart_front_xyz.getY(),length*cosf(theta));
+        line_end_xyz = kart_front_xyz + Vec3(length*sinf(theta),0.0,length*cosf(theta));
         line_color = video::SColor(255, 0, 100, 0);
-        draw3DLine( kart_front_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+        draw3DLine(kart_front_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
     }
 #endif
 } // drawHeadingLine
