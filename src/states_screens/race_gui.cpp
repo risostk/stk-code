@@ -626,20 +626,23 @@ void RaceGUI::drawGlobalMiniMap()
             ItemState* it = itm->getItem(i);
             if (it != NULL) //&& it->getType() != Item::ITEM_EASTER_EGG // hide easter egg
             {
-                video::ITexture *icon_item = itm->getIcon(it->getType())->getTexture();
-                assert(icon_item);
-                if (icon_item != NULL)
+                if (it->isAvailable()) // only show collectable items
                 {
-                    const Vec3& xyz = it->getXYZ().toIrrVector();
-                    Vec3 draw_at;
-                    track->mapPoint2MiniMap(xyz, &draw_at);
-                    // make item icon half the player icon size, otherwise too busy
-                    core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size/2), // left
-                                            lower_y   -(int)(draw_at.getY()+marker_half_size/2), // upper
-                                            m_map_left+(int)(draw_at.getX()+marker_half_size/2), // right
-                                            lower_y   -(int)(draw_at.getY()-marker_half_size/2));// lower
-                    core::rect<s32> source(core::position2di(0, 0), icon_item->getSize());
-                    draw2DImage(icon_item, pos_tmp, source, NULL, NULL, true);
+                    video::ITexture *icon_item = itm->getIcon(it->getType())->getTexture();
+                    assert(icon_item);
+                    if (icon_item != NULL)
+                    {
+                        const Vec3& xyz = it->getXYZ().toIrrVector();
+                        Vec3 draw_at;
+                        track->mapPoint2MiniMap(xyz, &draw_at);
+                        // make item icon half the player icon size, otherwise too busy
+                        core::rect<s32> pos_tmp(m_map_left+(int)(draw_at.getX()-marker_half_size/2), // left
+                                                lower_y   -(int)(draw_at.getY()+marker_half_size/2), // upper
+                                                m_map_left+(int)(draw_at.getX()+marker_half_size/2), // right
+                                                lower_y   -(int)(draw_at.getY()-marker_half_size/2));// lower
+                        core::rect<s32> source(core::position2di(0, 0), icon_item->getSize());
+                        draw2DImage(icon_item, pos_tmp, source, NULL, NULL, true);
+                    }
                 }
             }
         }
