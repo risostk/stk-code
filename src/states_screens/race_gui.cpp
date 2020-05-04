@@ -396,6 +396,12 @@ void RaceGUI::renderPlayerView(const Camera *camera, float dt)
 
     // draw heading line
     drawHeadingLine(kart,20);
+
+    // draw ball line
+    if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
+    {
+        drawBallLine(10);
+    }
 }   // renderPlayerView
 
 //-----------------------------------------------------------------------------
@@ -1455,6 +1461,25 @@ void RaceGUI::drawHeadingLine(const AbstractKart* kart, float length)
 #endif
 } // drawHeadingLine
 
+void RaceGUI::drawBallLine(float length)
+{
+    SoccerWorld *soccer_world = dynamic_cast<SoccerWorld*>(World::getWorld());
+    Vec3 ball_xyz = soccer_world->getBallPosition();
+    float theta = soccer_world->getBallHeading();
+    // three colors to better understand the distance
+    Vec3 line_end_xyz = ball_xyz + Vec3(length*sinf(theta),0.0,length*cosf(theta));
+    video::SColor line_color = video::SColor(228, 26, 28, 0);
+    draw3DLine(ball_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+    ball_xyz = line_end_xyz;
+    line_end_xyz = ball_xyz + Vec3(length*sinf(theta),0.0,length*cosf(theta));
+    line_color = video::SColor(255, 127, 0, 0);
+    draw3DLine(ball_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+    ball_xyz = line_end_xyz;
+    line_end_xyz = ball_xyz + Vec3(length*sinf(theta),0.0,length*cosf(theta));
+    line_color = video::SColor(255, 255, 51, 0);
+    draw3DLine(ball_xyz.toIrrVector(), line_end_xyz.toIrrVector(), line_color);
+} // drawBallLine
+
 // Draw the numeric speedometer
 void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
                                const core::vector2df &offset,
@@ -1472,7 +1497,7 @@ void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
 
     font->draw(oss2.str().c_str(), pos, color, true, true);
 
-    font->setScale(0.4f);
+    /*font->setScale(0.4f);
     pos.LowerRightCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
     pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.45f*meter_height));
 
@@ -1531,7 +1556,7 @@ void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
             font->draw(oss3.str().c_str(), pos, color, true, true);
             color = video::SColor(255, 255, 255, 255);
         }
-    }
+    }*/
     // TODO: else show other useful information in CTF and FFA
     font->setScale(1.0f);
 }
