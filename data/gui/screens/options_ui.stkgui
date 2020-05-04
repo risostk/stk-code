@@ -62,7 +62,6 @@
                     </div>
                 </div>
 
-
                 <spacer width="5" height="2%"/>
 
                 <div width="100%" height="fit" layout="horizontal-row">
@@ -106,7 +105,6 @@
                 </div>
 
                 <spacer width="5" height="2%"/>
-
 
                 <div layout="horizontal-row" width="100%" height="fit">
                     <checkbox id="story-mode-timer"/>
