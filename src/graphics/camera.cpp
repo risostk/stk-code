@@ -177,12 +177,12 @@ void Camera::setupCamera()
 
     if (RaceManager::get()->getNumLocalPlayers() > 0)
     {
-      m_fov = DEGREE_TO_RAD * stk_config->m_camera_fov
-        [RaceManager::get()->getNumLocalPlayers() - 1];
+        m_fov = DEGREE_TO_RAD * stk_config->m_camera_fov
+          [RaceManager::get()->getNumLocalPlayers() - 1];
     }
     else
     {
-      m_fov = DEGREE_TO_RAD * UserConfigParams::m_camera_fov;
+        m_fov = DEGREE_TO_RAD * UserConfigParams::m_camera_fov;
     }
 
     m_camera->setFOV(m_fov);

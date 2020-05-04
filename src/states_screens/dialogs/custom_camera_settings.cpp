@@ -81,16 +81,16 @@ GUIEngine::EventPropagation CustomCameraSettingsDialog::processEvent(const std::
 #ifndef SERVER_ONLY
     if (eventSource == "close")
     {
-          UserConfigParams::m_camera_fov = getWidget<SpinnerWidget>("fov")->getValue();
-          UserConfigParams::m_camera_distance = getWidget<SpinnerWidget>("camera_distance")->getFloatValue();
-          UserConfigParams::m_camera_forward_up_angle = getWidget<SpinnerWidget>("camera_angle")->getValue();
-          UserConfigParams::m_camera_forward_smoothing = getWidget<CheckBoxWidget>("camera_smoothing")->getState();
-          UserConfigParams::m_camera_backward_up_angle = getWidget<SpinnerWidget>("backward_camera_angle")->getValue();
-          UserConfigParams::m_reverse_look_use_soccer_cam = getWidget<CheckBoxWidget>("use_soccer_camera")->getState();
-          ModalDialog::dismiss();
-          OptionsScreenUI::getInstance()->updateCameraPresetSpinner();
-          return GUIEngine::EVENT_BLOCK;
-      }
+	UserConfigParams::m_camera_fov = getWidget<SpinnerWidget>("fov")->getValue();
+	UserConfigParams::m_camera_distance = getWidget<SpinnerWidget>("camera_distance")->getFloatValue();
+	UserConfigParams::m_camera_forward_up_angle = getWidget<SpinnerWidget>("camera_angle")->getValue();
+	UserConfigParams::m_camera_forward_smoothing = getWidget<CheckBoxWidget>("camera_smoothing")->getState();
+	UserConfigParams::m_camera_backward_up_angle = getWidget<SpinnerWidget>("backward_camera_angle")->getValue();
+	UserConfigParams::m_reverse_look_use_soccer_cam = getWidget<CheckBoxWidget>("use_soccer_camera")->getState();
+	ModalDialog::dismiss();
+	OptionsScreenUI::getInstance()->updateCameraPresetSpinner();
+	return GUIEngine::EVENT_BLOCK;
+    }
 #endif
     return GUIEngine::EVENT_LET;
 }   // processEvent

@@ -381,9 +381,12 @@ void SpinnerWidget::setValue(const int new_value)
     }
     else if (m_children.size() > 0)
     {
-        if (m_step == 1.0){
+        if (m_step == 1.0)
+        {
             m_children[1].m_element->setText( stringw(m_value).c_str() );
-        } else {
+        }
+        else
+        {
             std::wstringstream ws;
             ws << (m_value*m_step);
             std::wstring text = ws.str();
