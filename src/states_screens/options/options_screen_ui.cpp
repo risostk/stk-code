@@ -331,9 +331,8 @@ void OptionsScreenUI::init()
 
     m_camera_presets.push_back // Drone chase
     ({
-        100 /* fov */, 2.6 /* distance */, 33  /* angle */, false /* smoothing */, 10, /* backward angle */
+        100 /* fov */, 2.6 /* distance */, 33  /* angle */, true /* smoothing */, 10, /* backward angle */
     });
-
 
     GUIEngine::SpinnerWidget* camera_preset = getWidget<GUIEngine::SpinnerWidget>("camera_preset");
     assert( camera_preset != NULL );
