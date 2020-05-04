@@ -42,7 +42,8 @@
             <div width="100%" height="fit" layout="horizontal-row">
                 <spacer width="3%" height="100%" />
                 <div proportion="1" height="fit" layout="horizontal-row" >
-                    <label width="30%" height="100%" text_align="left" I18N="In the ui/camera screen" text="Smoothing"/>
+                    <label width="fit" height="100%" text_align="left" I18N="In the ui/camera screen" text="Smoothing"/>
+                    <spacer width="10" height="10"/>
                     <checkbox id="camera_smoothing"/>
                 </div>
             </div>
@@ -68,7 +69,8 @@
             <div width="100%" height="fit" layout="horizontal-row">
                 <spacer width="3%" height="100%" />
                 <div proportion="1" height="fit" layout="horizontal-row" >
-                    <label width="30%" height="100%" text_align="left" I18N="In the ui/camera screen" text="Follow ball in soccer mode"/>
+                    <label width="fit" height="100%" text_align="left" I18N="In the ui/camera screen" text="Follow ball in soccer mode"/>
+                    <spacer width="10" height="10"/>
                     <checkbox id="use_soccer_camera"/>
                 </div>
             </div>
