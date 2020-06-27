@@ -1084,6 +1084,12 @@ void RaceGUI::drawSpeedEnergyRank(const AbstractKart* kart,
 
     drawRank(kart, offset, min_ratio, meter_width, meter_height, dt);
     drawNumericSpeed(kart, offset, meter_width, meter_height);
+    core::vector2df offset2;
+    offset2.X = (float) viewport.getCenter().X;
+    offset2.Y = (float) (viewport.getCenter().Y - 0.4*m_font_height);
+    int hub_width = m_font_height*12*0.4;
+    int hub_height = m_font_height*2*0.4;
+    drawHubSpeed(kart,offset2,hub_width,hub_height);
 
     if(speed <=0) return;  // Nothing to do if speed is negative.
 
@@ -1567,4 +1573,33 @@ void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
     }*/
     // TODO: else show other useful information in CTF and FFA
     font->setScale(1.0f);
+}
+
+// draw a Hub to show the speed
+void RaceGUI::drawHubSpeed(const AbstractKart *kart,
+                           const core::vector2df &offset,
+                           int hub_width,int hub_height)
+{
+
+    if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_SOCCER)
+    {
+        SoccerWorld *soccer_world = dynamic_cast<SoccerWorld*>(World::getWorld());
+        static video::SColor color = video::SColor(255, 255, 255, 255);
+        gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
+        core::recti pos;
+        font->setScale(0.4f);
+        // draw the ball speed
+        pos.LowerRightCorner = core::vector2di(int(offset.X - 0.5f*hub_width), int(offset.Y));
+        pos.UpperLeftCorner  = core::vector2di(int(offset.X + 0.5f*hub_width), int(offset.Y - 0.5f*hub_height));
+        std::ostringstream oss;
+        oss << "Ball " << std::fixed << std::setprecision(1) << soccer_world->getBallVelocity();
+        font->draw(oss.str().c_str(), pos, color, true, true);
+        // draw the kart speed
+        pos.LowerRightCorner = core::vector2di(int(offset.X - 0.5f*hub_width), int(offset.Y - 0.5f*hub_height));
+        pos.UpperLeftCorner  = core::vector2di(int(offset.X + 0.5f*hub_width), int(offset.Y - 1.0f*hub_height));
+        std::ostringstream oss1;
+        oss1 << "Kart " << std::fixed << std::setprecision(1) << kart->getSpeed();
+        font->draw(oss1.str().c_str(), pos, color, true, true);
+        font->setScale(1.0f);
+    }
 }
