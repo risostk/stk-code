@@ -815,6 +815,18 @@ void RaceGUI::drawGlobalMiniMap()
                 draw2DImage(icon_attachment, posAttach, rect, NULL, NULL, true);
             }
         }
+        // show player's name initials
+        if (UserConfigParams::m_karts_powerup_gui &&
+            !kart->getName().empty())
+        {
+            gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
+            const core::rect<s32> posNumber(m_map_left+(int)(draw_at.getX()+marker_half_size/2),  // left
+                                            lower_y   -(int)(draw_at.getY()+marker_half_size*3/2),// upper
+                                            m_map_left+(int)(draw_at.getX()+marker_half_size*3/2),// right
+                                            lower_y   -(int)(draw_at.getY()+marker_half_size/2)); // lower
+            font->setScale((float) marker_half_size/((float)font->getDimension(L"X").Height));
+            font->draw(kart->getName().subString(0,1), posNumber, video::SColor(255, 255, 255, 255));
+        }
 
     }   // for i<getNumKarts
 
