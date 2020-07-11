@@ -23,6 +23,7 @@
 #include "config/user_config.hpp"
 #include "io/file_manager.hpp"
 #include "graphics/irr_driver.hpp"
+#include "guiengine/message_queue.hpp"
 #include "karts/abstract_kart_animation.hpp"
 #include "karts/kart_model.hpp"
 #include "karts/kart_properties.hpp"
@@ -524,7 +525,8 @@ void SoccerWorld::onCheckGoalTriggered(bool first_goal)
             msg = _("%s scored a goal!", sd.m_player);
         else
             msg = _("Oops, %s made an own goal!", sd.m_player);
-        m_race_gui->addMessage(msg, NULL, 3.0f);
+        //m_race_gui->addMessage(msg, NULL, 3.0f);
+        MessageQueue::add(MessageQueue::MT_GENERIC, msg);
 #endif
 
         if (first_goal)
@@ -646,8 +648,9 @@ void SoccerWorld::handlePlayerGoalFromServer(const NetworkString& ns)
         msg = _("%s scored a goal!", sd.m_player);
     else
         msg = _("Oops, %s made an own goal!", sd.m_player);
-    m_race_gui->addMessage(msg, NULL,
-        stk_config->ticks2Time(ticks_back_to_own_goal - ticks_now));
+    //m_race_gui->addMessage(msg, NULL,
+    //    stk_config->ticks2Time(ticks_back_to_own_goal - ticks_now));
+    MessageQueue::add(MessageQueue::MT_GENERIC, msg);
 
     m_ticks_back_to_own_goal = ticks_back_to_own_goal;
     for (unsigned i = 0; i < m_karts.size(); i++)
