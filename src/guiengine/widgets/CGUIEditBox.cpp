@@ -29,7 +29,10 @@
 #include <cstdlib>
 
 #ifdef ANDROID
-#include "../../../lib/irrlicht/source/Irrlicht/CIrrDeviceAndroid.h"
+#include <SDL_system.h>
+extern bool Android_isHardwareKeyboardConnected();
+extern void Android_toggleOnScreenKeyboard(bool show, int type, int y);
+extern void Android_fromSTKEditBox(int widget_id, const core::stringw& text, int selection_start, int selection_end, int type);
 #endif
 
 #if !defined(SERVER_ONLY) && defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
@@ -177,41 +180,6 @@ _raqm_get_grapheme_break (hb_codepoint_t ch,
 };
 #endif
 
-#if !defined(SERVER_ONLY) && defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
-CGUIEditBox* g_editbox = NULL;
-extern "C" void handle_textinput(SDL_Event& event)
-{
-    if (g_editbox)
-        g_editbox->handleSDLEvent(event);
-}
-
-void CGUIEditBox::handleSDLEvent(SDL_Event& event)
-{
-    switch (event.type)
-    {
-    case SDL_TEXTINPUT:
-    {
-        m_composing_text.clear();
-        m_composing_start = 0;
-        m_composing_end = 0;
-        std::u32string text = StringUtils::utf8ToUtf32(event.text.text);
-        for (char32_t t : text)
-            inputChar(t);
-        break;
-    }
-    case SDL_TEXTEDITING:
-        m_composing_text = StringUtils::utf8ToUtf32(event.edit.text);
-        m_composing_start = m_cursor_pos;
-        m_composing_end = m_cursor_pos + m_composing_text.size();
-        // In linux these values don't seem to provide any more useful info
-        // It's always 0, event.edit.text.size()
-        //printf("Debug: %d, %d\n", event.edit.start, event.edit.length);
-        break;
-    }
-}
-
-#endif
-
 //! constructor
 CGUIEditBox::CGUIEditBox(const wchar_t* text, bool border,
         IGUIEnvironment* environment, IGUIElement* parent, s32 id,
@@ -269,15 +237,13 @@ CGUIEditBox::~CGUIEditBox()
 #ifndef SERVER_ONLY
     if (Operator)
         Operator->drop();
-#ifdef _IRR_COMPILE_WITH_SDL_DEVICE_
-    SDL_StopTextInput();
-    g_editbox = NULL;
-#endif
-
 #ifdef ANDROID
     if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
         GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard())
-        irr_driver->getDevice()->toggleOnScreenKeyboard(false);
+        Android_toggleOnScreenKeyboard(false, 0, 0);
+#elif defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
+    if (SDL_IsTextInputActive())
+        SDL_StopTextInput();
 #endif
 
 #endif
@@ -372,6 +338,26 @@ bool CGUIEditBox::OnEvent(const SEvent& event)
     {
         switch(event.EventType)
         {
+        case EET_SDL_TEXT_EVENT:
+            if (event.SDLTextEvent.Type == SDL_TEXTINPUT)
+            {
+                m_composing_text.clear();
+                m_composing_start = 0;
+                m_composing_end = 0;
+                std::u32string text = StringUtils::utf8ToUtf32(event.SDLTextEvent.Text);
+                for (char32_t t : text)
+                    inputChar(t);
+            }
+            else
+            {
+                m_composing_text = StringUtils::utf8ToUtf32(event.SDLTextEvent.Text);
+                m_composing_start = m_cursor_pos;
+                m_composing_end = m_cursor_pos + m_composing_text.size();
+                // In linux these values don't seem to provide any more useful info
+                // It's always 0, event.edit.text.size()
+                //printf("Debug: %d, %d\n", event.SDLTextEvent.Start, event.SDLTextEvent.Length);
+            }
+            return true;
         case EET_GUI_EVENT:
             if (event.GUIEvent.EventType == EGET_ELEMENT_FOCUS_LOST)
             {
@@ -380,9 +366,18 @@ bool CGUIEditBox::OnEvent(const SEvent& event)
                     MouseMarking = false;
                     setTextMarkers(0,0);
                 }
-#if defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
-                SDL_StopTextInput();
-                g_editbox = NULL;
+#if !defined(ANDROID) && defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
+                if (SDL_IsTextInputActive())
+                    SDL_StopTextInput();
+#endif
+#ifdef ANDROID
+            // If using non touchscreen input in android dismiss text input
+            // if out focus because it cannot use emoji keyboard at the same
+            // time
+            if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
+                GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard() &&
+                (Android_isHardwareKeyboardConnected() || SDL_IsAndroidTV()))
+                Android_toggleOnScreenKeyboard(false, 0, 0);
 #endif
                 m_composing_start = 0;
                 m_composing_end = 0;
@@ -390,31 +385,32 @@ bool CGUIEditBox::OnEvent(const SEvent& event)
             }
             else if (event.GUIEvent.EventType == EGET_ELEMENT_FOCUSED)
             {
+                // Required for correct screen keyboard position in the beginning
+                FrameRect = AbsoluteRect;
                 m_mark_begin = m_mark_end = m_cursor_pos = getTextCount();
-#ifdef _IRR_COMPILE_WITH_SDL_DEVICE_
+#ifdef ANDROID
+                calculateScrollPos();
+                if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
+                    GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard())
+                {
+                    // If user toggle with hacker keyboard with arrows, keep
+                    // using only text from STKEditText
+                    Android_fromSTKEditBox(getID(), Text, m_mark_begin, m_mark_end, m_type);
+                    // Enable auto focus which allows hardware keyboard unicode characters
+                    Android_toggleOnScreenKeyboard(true, m_type, CurrentTextRect.LowerRightCorner.Y + 5);
+                }
+#elif defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
 #ifdef WIN32
                 // In windows we use caret to determine candidate box, which
                 // needs to calculate it first
                 calculateScrollPos();
 #endif
                 SDL_StartTextInput();
-                g_editbox = this;
 #endif
-#ifndef WIN32
+#if !defined(ANDROID) && !defined(WIN32)
                 calculateScrollPos();
 #endif
-#ifdef ANDROID
-                if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
-                    GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard() &&
-                    irr_driver->getDevice()->getType() == irr::EIDT_ANDROID)
-                {
-                    // If user toggle with hacker keyboard with arrows, keep
-                    // using only text from STKEditTex
-                    CIrrDeviceAndroid* dl = dynamic_cast<CIrrDeviceAndroid*>(
-                                                       irr_driver->getDevice());
-                    dl->fromSTKEditBox(getID(), Text, m_mark_begin, m_mark_end, m_type);
-                }
-#endif
+
                 m_composing_text.clear();
             }
             break;
@@ -692,7 +688,7 @@ bool CGUIEditBox::processKey(const SEvent& event)
 #ifdef ANDROID
             if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
                 GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard())
-                irr_driver->getDevice()->toggleOnScreenKeyboard(false);
+                Android_toggleOnScreenKeyboard(false, 0, 0);
 #endif
             sendGuiEvent( EGET_EDITBOX_ENTER );
         }
@@ -1038,12 +1034,9 @@ void CGUIEditBox::setText(const core::stringw& text)
     calculateScrollPos();
 #ifdef ANDROID
         if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
-            GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard() &&
-            irr_driver->getDevice()->getType() == irr::EIDT_ANDROID)
+            GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard())
         {
-            CIrrDeviceAndroid* dl = dynamic_cast<CIrrDeviceAndroid*>(
-                                                irr_driver->getDevice());
-            dl->fromSTKEditBox(getID(), Text, m_mark_begin, m_mark_end, m_type);
+            Android_fromSTKEditBox(getID(), Text, m_mark_begin, m_mark_end, m_type);
         }
 #endif
 }
@@ -1163,7 +1156,7 @@ bool CGUIEditBox::processMouse(const SEvent& event)
             {
 #ifdef ANDROID
                 if (GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard())
-                    irr_driver->getDevice()->toggleOnScreenKeyboard(true, m_type);
+                    Android_toggleOnScreenKeyboard(true, m_type, CurrentTextRect.LowerRightCorner.Y + 5);
                 else
 #endif
                     openScreenKeyboard();
@@ -1382,7 +1375,7 @@ void CGUIEditBox::calculateScrollPos()
 
     // todo: adjust scrollbar
     // calculate the position of input composition window
-#if defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
+#if !defined(ANDROID) && defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
     SDL_Rect rect;
     rect.x = CurrentTextRect.UpperLeftCorner.X + m_cursor_distance - 1;
     rect.y = CurrentTextRect.UpperLeftCorner.Y;
@@ -1418,12 +1411,9 @@ void CGUIEditBox::setTextMarkers(s32 begin, s32 end)
         sendGuiEvent(EGET_EDITBOX_MARKING_CHANGED);
 #ifdef ANDROID
         if (GUIEngine::ScreenKeyboard::shouldUseScreenKeyboard() &&
-            GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard() &&
-            irr_driver->getDevice()->getType() == irr::EIDT_ANDROID)
+            GUIEngine::ScreenKeyboard::hasSystemScreenKeyboard())
         {
-            CIrrDeviceAndroid* dl = dynamic_cast<CIrrDeviceAndroid*>(
-                                                irr_driver->getDevice());
-            dl->fromSTKEditBox(getID(), Text, m_mark_begin, m_mark_end, m_type);
+            Android_fromSTKEditBox(getID(), Text, m_mark_begin, m_mark_end, m_type);
         }
 #endif
     }

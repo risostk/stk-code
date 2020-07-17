@@ -563,10 +563,9 @@ namespace UserConfigParams
             "multitouch interface."));
 
     PARAM_PREFIX IntUserConfigParam         m_screen_keyboard
-            PARAM_DEFAULT( IntUserConfigParam(1, "screen_keyboard_mode",
+            PARAM_DEFAULT( IntUserConfigParam(0, "screen_keyboard_status",
             &m_multitouch_group,
-            "Screen keyboard mode: 0 = disabled, 1 = enabled if no hardware "
-            "keyboard, 2 = always enabled") );
+            "STK screen keyboard status: 0 = disabled, 1 = enabled") );
 
     // ---- GP start order
     PARAM_PREFIX GroupUserConfigParam        m_gp_start_order
@@ -902,7 +901,7 @@ namespace UserConfigParams
     PARAM_PREFIX IntUserConfigParam         m_swap_interval
             PARAM_DEFAULT( IntUserConfigParam(0, "swap_interval",
                            &m_graphics_quality,
-                           "Swap interval for vsync: 0 = disabled, 1 = full, 2 = half") );
+                           "Swap interval for vsync: 0 = disabled, 1 = full") );
     PARAM_PREFIX BoolUserConfigParam         m_motionblur
             PARAM_DEFAULT( BoolUserConfigParam(false,
                            "motionblur_enabled", &m_graphics_quality,

@@ -168,9 +168,7 @@ IrrDriver::IrrDriver()
     p.SwapInterval  = 0;
     p.EventReceiver = NULL;
     p.FileSystem    = file_manager->getFileSystem();
-#ifdef ANDROID
-    p.PrivateData   = (void*)global_android_app;
-#endif
+    p.PrivateData   = NULL;
 
     m_device = createDeviceEx(p);
 
@@ -465,9 +463,7 @@ void IrrDriver::initDevice()
 #else
             params.DriverType    = video::EDT_OPENGL;
 #endif
-#if defined(ANDROID)
-            params.PrivateData = (void*)global_android_app;
-#endif
+            params.PrivateData   = NULL;
             params.Stencilbuffer = false;
             params.Bits          = bits;
             params.EventReceiver = this;
@@ -776,38 +772,6 @@ void IrrDriver::initDevice()
 
     if (GUIEngine::isNoGraphics())
         return;
-
-    m_device->registerGetMovedHeightFunction([]
-        (const IrrlichtDevice* device)->int
-        {
-#ifdef ANDROID
-            int screen_keyboard_height =
-                device->getOnScreenKeyboardHeight();
-            int screen_height = device->getScreenHeight();
-            if (screen_keyboard_height == 0 || screen_height == 0)
-                return 0;
-
-            GUIEngine::Widget* w = GUIEngine::getFocusForPlayer(0);
-            if (!w)
-                return 0;
-
-            core::rect<s32> pos =
-                w->getIrrlichtElement()->getAbsolutePosition();
-            // Add 10% margin
-            int element_height = (int)device->getScreenHeight() -
-                pos.LowerRightCorner.Y - int(screen_height * 0.01f);
-            if (element_height > screen_keyboard_height)
-                return 0;
-            else if (element_height < 0)
-            {
-                // For buttons near the edge of the bottom of screen
-                return screen_keyboard_height;
-            }
-            return screen_keyboard_height - element_height;
-#else
-            return 0;
-#endif
-        });
 }   // initDevice
 
 // ----------------------------------------------------------------------------
@@ -1063,6 +1027,9 @@ void IrrDriver::applyResolutionSettings(bool recreate_device)
     // Input manager set first so it recieves SDL joystick event
     // Re-init GUI engine
     GUIEngine::init(m_device, m_video_driver, StateManager::get());
+    // If not recreate device we need to add the previous joystick manually
+    if (!recreate_device)
+        input_manager->addJoystick();
 
     setMaxTextureSize();
     //material_manager->reInit();
@@ -2014,7 +1981,19 @@ void IrrDriver::handleWindowResize()
 {
     bool dialog_exists = GUIEngine::ModalDialog::isADialogActive() ||
             GUIEngine::ScreenKeyboard::isActive();
-    if (m_actual_screen_size != m_video_driver->getCurrentRenderTargetSize())
+
+    // This will allow main menu auto resize if missed a resize event
+    core::dimension2du current_screen_size =
+        m_video_driver->getCurrentRenderTargetSize();
+    GUIEngine::Screen* screen = GUIEngine::getCurrentScreen();
+    if (screen && screen->isResizable())
+    {
+        current_screen_size.Width = screen->getWidth();
+        current_screen_size.Height = screen->getHeight();
+    }
+
+    if (m_actual_screen_size != m_video_driver->getCurrentRenderTargetSize() ||
+        current_screen_size != m_video_driver->getCurrentRenderTargetSize())
     {
         // Don't update when dialog is opened
         if (dialog_exists)
@@ -2068,7 +2047,6 @@ void IrrDriver::update(float dt, bool is_loading)
 #endif
     World *world = World::getWorld();
 
-    int moved_height = irr_driver->getDevice()->getMovedHeight();
     if (world)
     {
 #ifndef SERVER_ONLY
@@ -2077,11 +2055,7 @@ void IrrDriver::update(float dt, bool is_loading)
         GUIEngine::Screen* current_screen = GUIEngine::getCurrentScreen();
         if (current_screen != NULL && current_screen->needs3D())
         {
-            glViewport(0, moved_height, irr_driver->getActualScreenSize().Width,
-                irr_driver->getActualScreenSize().Height);
             GUIEngine::render(dt, is_loading);
-            glViewport(0, 0, irr_driver->getActualScreenSize().Width,
-                irr_driver->getActualScreenSize().Height);
         }
 
         if (!is_loading && Physics::get())
@@ -2100,15 +2074,11 @@ void IrrDriver::update(float dt, bool is_loading)
         m_video_driver->beginScene(/*backBuffer clear*/ true, /*zBuffer*/ true,
                                    video::SColor(255,100,101,140));
 
-        glViewport(0, moved_height, irr_driver->getActualScreenSize().Width,
-            irr_driver->getActualScreenSize().Height);
         GUIEngine::render(dt, is_loading);
         if (m_render_nw_debug && !is_loading)
         {
             renderNetworkDebug();
         }
-        glViewport(0, 0, irr_driver->getActualScreenSize().Width,
-            irr_driver->getActualScreenSize().Height);
         m_video_driver->endScene();
 #endif
     }
