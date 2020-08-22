@@ -842,7 +842,7 @@ void RaceGUI::drawGlobalMiniMap()
         video::ITexture* icon = m_basket_ball_icon;
 
         core::rect<s32> source(core::position2di(0, 0), icon->getSize());
-        int marker_half_size = m_minimap_player_size / 2;
+        int marker_half_size = m_minimap_player_size / 4;
         core::rect<s32> position(m_map_left+(int)(draw_at.getX()-marker_half_size),
                                  lower_y   -(int)(draw_at.getY()+marker_half_size),
                                  m_map_left+(int)(draw_at.getX()+marker_half_size),
