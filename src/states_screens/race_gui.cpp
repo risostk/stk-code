@@ -58,6 +58,9 @@ using namespace irr;
 #include "network/protocols/client_lobby.hpp"
 #include "race/race_manager.hpp"
 #include "states_screens/race_gui_multitouch.hpp"
+#include "tracks/check_line.hpp"
+#include "tracks/check_manager.hpp"
+#include "tracks/check_structure.hpp"
 #include "tracks/track.hpp"
 #include "tracks/track_object_manager.hpp"
 #include "utils/constants.hpp"
@@ -106,6 +109,7 @@ RaceGUI::RaceGUI()
     m_soccer_ball = irr_driver->getTexture(FileManager::GUI_ICON, "soccer_ball_normal.png");
     m_heart_icon = irr_driver->getTexture(FileManager::GUI_ICON, "heart.png");
     m_basket_ball_icon = irr_driver->getTexture(FileManager::GUI_ICON, "rubber_ball-icon.png");
+    m_checkline_icon = irr_driver->getTexture(FileManager::GUI_ICON, "checkline.png");
     m_champion = irr_driver->getTexture(FileManager::GUI_ICON, "cup_gold.png");
 }   // RaceGUI
 
@@ -831,6 +835,41 @@ void RaceGUI::drawGlobalMiniMap()
         }
 
     }   // for i<getNumKarts
+
+    // Draw checklines on the minimap
+    if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER)
+    {
+        // Loop all checklines
+        core::rect<s32> rect(core::position2di(0, 0), m_checkline_icon->getSize());
+        CheckManager* cm = Track::getCurrentTrack()->getCheckManager();
+        for (unsigned i = 0; i < cm->getCheckStructureCount(); i++)
+        {
+            CheckStructure* cs = cm->getCheckStructure(i);
+            if(cs->getType() == CheckStructure::CT_ACTIVATE)
+            {
+                CheckLine* cl = dynamic_cast<CheckLine*>(cs);
+
+                // get the two points that define the checkline and map to minimap
+                Vec3 p1, p2;
+                track->mapPoint2MiniMap(cl->getLeftPoint() , &p1);
+                track->mapPoint2MiniMap(cl->getRightPoint(), &p2);
+
+                // draw the checkline
+                const Vec3 direction = p2-p1;
+                const Vec3 draw_at = 0.5f*(p1+p2);
+                const float rotation = atan2f(direction.getY(),direction.getX());
+                const s32 half_line_size = (s32)(0.5f*direction.length());
+                core::rect<s32> position(m_map_left+(int)(draw_at.getX()-half_line_size),
+                                         lower_y   -(int)(draw_at.getY()+half_line_size),
+                                         m_map_left+(int)(draw_at.getX()+half_line_size),
+                                         lower_y   -(int)(draw_at.getY()-half_line_size));
+
+                draw2DImage(m_checkline_icon, position, rect, NULL, NULL, true, false, -1.0f*rotation);
+            }
+        }
+    }
 
     // Draw the basket-ball icons on the minimap
     std::vector<Vec3> basketballs = ProjectileManager::get()->getBasketballPositions();
