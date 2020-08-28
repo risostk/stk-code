@@ -251,6 +251,8 @@ public:
     // ------------------------------------------------------------------------
     AbstractKart* getKartAtDrawingPosition(unsigned int p) const OVERRIDE
                                 { return getKart(m_team_icon_draw_id[p - 1]); }
+    // ------------------------------------------------------------------------
+    TrackObject* getBall() const { return m_ball; }
 };   // SoccerWorld
 
 
