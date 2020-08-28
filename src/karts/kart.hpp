@@ -356,6 +356,7 @@ public:
                                int fade_in_time) OVERRIDE;
     // ----------------------------------------------------------------------------------------
     virtual int   getSpeedIncreaseTicksLeft(unsigned int category) const OVERRIDE;
+    virtual int   getSpeedDecreaseTicksLeft(unsigned int category) const OVERRIDE;
     // ----------------------------------------------------------------------------------------
     virtual float  getSpeed() const OVERRIDE { return m_speed; }
     // ----------------------------------------------------------------------------------------

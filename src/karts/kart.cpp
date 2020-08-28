@@ -503,6 +503,11 @@ int Kart::getSpeedIncreaseTicksLeft(unsigned int category) const
     return m_max_speed->getSpeedIncreaseTicksLeft(category);
 }   // getSpeedIncreaseTimeLeft
 
+int Kart::getSpeedDecreaseTicksLeft(unsigned int category) const
+{
+    return m_max_speed->getSpeedDecreaseTicksLeft(category);
+}   // getSpeedDecreaseTimeLeft
+
 // -----------------------------------------------------------------------------
 void Kart::setBoostAI(bool boosted)
 {

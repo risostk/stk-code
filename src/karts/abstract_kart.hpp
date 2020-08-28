@@ -308,6 +308,11 @@ public:
      *  category.
      *  \param category Which category to report on. */
     virtual int getSpeedIncreaseTicksLeft(unsigned int category) const = 0;
+    // ------------------------------------------------------------------------
+    /** Returns how much decreased speed time is left over in the given
+     *  category.
+     *  \param category Which category to report on. */
+    virtual int getSpeedDecreaseTicksLeft(unsigned int category) const = 0;
     
     // ------------------------------------------------------------------------
     /** Sets the kart AI boost state.

@@ -50,6 +50,7 @@ using namespace irr;
 #include "karts/controller/spare_tire_ai.hpp"
 #include "karts/kart_properties.hpp"
 #include "karts/kart_properties_manager.hpp"
+#include "karts/max_speed.hpp"
 #include "modes/capture_the_flag.hpp"
 #include "modes/follow_the_leader.hpp"
 #include "modes/linear_world.hpp"
@@ -1156,13 +1157,26 @@ void RaceGUI::drawSpeedEnergyRank(const AbstractKart* kart,
     const float speed =  kart->getSpeed();
 
     drawRank(kart, offset, min_ratio, meter_width, meter_height, dt);
-    drawNumericSpeed(kart, offset, meter_width, meter_height);
+
+    if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL ||
+        RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER)
+    {
+        drawNumericSpeed2(kart, offset, meter_width, meter_height);
+    }
+    else
+    {
+        drawNumericSpeed(kart, offset, meter_width, meter_height);
+    }
+
+    /*
     core::vector2df offset2;
     offset2.X = (float) viewport.getCenter().X;
     offset2.Y = (float) (viewport.getCenter().Y - 0.4*m_font_height);
     int hub_width = m_font_height*12*0.4;
     int hub_height = m_font_height*2*0.4;
     drawHubSpeed(kart,offset2,hub_width,hub_height);
+    */
 
     if(speed <=0) return;  // Nothing to do if speed is negative.
 
@@ -1645,6 +1659,218 @@ void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
         }
     }*/
     // TODO: else show other useful information in CTF and FFA
+    font->setScale(1.0f);
+}
+
+// Draw a more detailed numeric speedometer
+void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
+                               const core::vector2df &offset,
+                               int meter_width, int meter_height)
+{
+    static video::SColor color = video::SColor(255, 255, 255, 255);
+    static video::SColor color_red = video::SColor(255, 255, 0, 0);
+    static video::SColor color_green = video::SColor(255, 0, 255, 0);
+    gui::ScalableFont* font = GUIEngine::getHighresDigitFont();
+
+    font->setScale(0.4f);
+    core::recti pos;
+    std::ostringstream oss;
+
+    // current speed / max. speed
+    pos.LowerRightCorner = core::vector2di(int(offset.X + 1.0f*meter_width), int(offset.Y - 2.0f*meter_height + 0.4f*m_font_height));
+    pos.UpperLeftCorner  = core::vector2di(int(offset.X + 0.0f*meter_width), int(offset.Y - 2.0f*meter_height));
+    oss << std::fixed << std::setprecision(2) << "Speed: " << kart->getSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
+    font->draw(oss.str().c_str(), pos, color, false, true);
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << std::fixed << std::setprecision(2) << "Max. : " << kart->getCurrentMaxSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
+    font->draw(oss.str().c_str(), pos, color, false, true);
+
+    /*pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << std::fixed << std::setprecision(2) << "Force: " << kart->getActualWheelForce2();
+    font->draw(oss.str().c_str(), pos, color, true, true);*/
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << std::fixed << std::setprecision(2) << "Nitro: " << kart->getEnergy();
+    font->draw(oss.str().c_str(), pos, color, false, true);
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << "-----------------";
+    font->draw(oss.str().c_str(), pos, color, false, true);
+
+    int duration = 0;
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_ZIPPER);
+    if (duration > 0)
+    {
+        oss << "zipper : " << duration << " ms";
+        font->draw(oss.str().c_str(), pos, color_green, false, true);
+    }
+    else
+    {
+        oss << "zipper : ";
+        font->draw(oss.str().c_str(), pos, color, false, true);
+    }
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_NITRO);
+    if (duration > 0)
+    {
+        oss << "nitro  : " << duration << " ms";
+        font->draw(oss.str().c_str(), pos, color_green, false, true);
+    }
+    else
+    {
+        oss << "nitro  : ";
+        font->draw(oss.str().c_str(), pos, color, false, true);
+    }
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_SKIDDING);
+    if (duration > 0)
+    {
+        oss << "skid y : " << duration << " ms";
+        font->draw(oss.str().c_str(), pos, color_green, false, true);
+    }
+    else
+    {
+        oss << "skid y : ";
+        font->draw(oss.str().c_str(), pos, color, false, true);
+    }
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_RED_SKIDDING);
+    if (duration > 0)
+    {
+        oss << "skid r : " << duration << " ms";
+        font->draw(oss.str().c_str(), pos, color_green, false, true);
+    }
+    else
+    {
+        oss << "skid r : ";
+        font->draw(oss.str().c_str(), pos, color, false, true);
+    }
+
+    // show those related to item usage
+    if (RaceManager::get()->getMinorMode() != RaceManager::MINOR_MODE_TIME_TRIAL)
+    {
+        pos.LowerRightCorner.Y += 0.4f*m_font_height;
+        pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+        oss.str(""); oss.clear();
+        duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_SLIPSTREAM);
+        if (duration > 0)
+        {
+            oss << "slip st: " << duration << " ms";
+            font->draw(oss.str().c_str(), pos, color_green, false, true);
+        }
+        else
+        {
+            oss << "slip st: ";
+            font->draw(oss.str().c_str(), pos, color, false, true);
+        }
+
+        pos.LowerRightCorner.Y += 0.4f*m_font_height;
+        pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+        oss.str(""); oss.clear();
+        duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_RUBBER);
+        if (duration > 0)
+        {
+            oss << "rubber : " << duration << " ms";
+            font->draw(oss.str().c_str(), pos, color_green, false, true);
+        }
+        else
+        {
+            oss << "rubber : ";
+            font->draw(oss.str().c_str(), pos, color, false, true);
+        }
+    }
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << "-----------------";
+    font->draw(oss.str().c_str(), pos, color, false, true);
+
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_TERRAIN);
+    if (duration > 0)
+    {
+        oss << "terrain: " << duration << " ms";
+        font->draw(oss.str().c_str(), pos, color_red, false, true);
+    }
+    else
+    {
+        oss << "terrain: ";
+        font->draw(oss.str().c_str(), pos, color, false, true);
+    }
+
+    // show those related to item usage
+    if (RaceManager::get()->getMinorMode() != RaceManager::MINOR_MODE_TIME_TRIAL)
+    {
+        pos.LowerRightCorner.Y += 0.4f*m_font_height;
+        pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+        oss.str(""); oss.clear();
+        duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_BUBBLE);
+        if (duration > 0)
+        {
+            oss << "bubble : " << duration << " ms";
+            font->draw(oss.str().c_str(), pos, color_red, false, true);
+        }
+        else
+        {
+            oss << "bubble : ";
+            font->draw(oss.str().c_str(), pos, color, false, true);
+        }
+
+        pos.LowerRightCorner.Y += 0.4f*m_font_height;
+        pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+        oss.str(""); oss.clear();
+        duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_SQUASH);
+        if (duration > 0)
+        {
+            oss << "squash : " << duration << " ms";
+            font->draw(oss.str().c_str(), pos, color_red, false, true);
+        }
+        else
+        {
+            oss << "squash : ";
+            font->draw(oss.str().c_str(), pos, color, false, true);
+        }
+
+        pos.LowerRightCorner.Y += 0.4f*m_font_height;
+        pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+        oss.str(""); oss.clear();
+        duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_AI);
+        if (duration > 0)
+        {
+            oss << "AI     : " << duration << " ms";
+            font->draw(oss.str().c_str(), pos, color_red, false, true);
+        }
+        else
+        {
+            oss << "AI     : ";
+            font->draw(oss.str().c_str(), pos, color, false, true);
+        }
+    }
+
     font->setScale(1.0f);
 }
 

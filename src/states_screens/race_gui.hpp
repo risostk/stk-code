@@ -140,6 +140,9 @@ private:
     void drawNumericSpeed      (const AbstractKart *kart,
                                 const core::vector2df &offset,
                                 int meter_width, int meter_height);
+    void drawNumericSpeed2     (const AbstractKart *kart,
+                                const core::vector2df &offset,
+                                int meter_width, int meter_height);
     void drawHubSpeed(const AbstractKart *kart,
                       const core::vector2df &offset,
                       int hub_width, int hub_height);
