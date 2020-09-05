@@ -1677,8 +1677,8 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     std::ostringstream oss;
 
     // current speed / max. speed
-    pos.LowerRightCorner = core::vector2di(int(offset.X + 1.0f*meter_width), int(offset.Y - 2.0f*meter_height + 0.4f*m_font_height));
-    pos.UpperLeftCorner  = core::vector2di(int(offset.X + 0.0f*meter_width), int(offset.Y - 2.0f*meter_height));
+    pos.LowerRightCorner = core::vector2di(int(offset.X - 0.2f*meter_width), int(offset.Y - 2.0f*meter_height + 0.4f*m_font_height));
+    pos.UpperLeftCorner  = core::vector2di(int(offset.X - 1.2f*meter_width), int(offset.Y - 2.0f*meter_height));
     oss << std::fixed << std::setprecision(2) << "Speed: " << kart->getSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
     font->draw(oss.str().c_str(), pos, color, false, true);
 
@@ -1706,14 +1706,14 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     oss << "-----------------";
     font->draw(oss.str().c_str(), pos, color, false, true);
 
-    int duration = 0;
+    float duration = 0.0f;
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
-    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_ZIPPER);
+    duration = (float)kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_ZIPPER);
     if (duration > 0)
     {
-        oss << "zipper : " << duration << " ms";
+        oss << std::fixed << std::setprecision(3) << "zipper : " << duration/100 << " s";
         font->draw(oss.str().c_str(), pos, color_green, false, true);
     }
     else
@@ -1725,10 +1725,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
-    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_NITRO);
+    duration = (float)kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_NITRO);
     if (duration > 0)
     {
-        oss << "nitro  : " << duration << " ms";
+        oss << std::fixed << std::setprecision(3) << "nitro  : " << duration/100 << " s";
         font->draw(oss.str().c_str(), pos, color_green, false, true);
     }
     else
@@ -1740,10 +1740,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
-    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_SKIDDING);
+    duration = (float)kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_SKIDDING);
     if (duration > 0)
     {
-        oss << "skid y : " << duration << " ms";
+        oss << std::fixed << std::setprecision(3) << "skid y : " << duration/100 << " s";
         font->draw(oss.str().c_str(), pos, color_green, false, true);
     }
     else
@@ -1755,10 +1755,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
-    duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_RED_SKIDDING);
+    duration = (float)kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_RED_SKIDDING);
     if (duration > 0)
     {
-        oss << "skid r : " << duration << " ms";
+        oss << std::fixed << std::setprecision(3) << "skid r : " << duration/100 << " s";
         font->draw(oss.str().c_str(), pos, color_green, false, true);
     }
     else
@@ -1773,10 +1773,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         pos.LowerRightCorner.Y += 0.4f*m_font_height;
         pos.UpperLeftCorner.Y += 0.4f*m_font_height;
         oss.str(""); oss.clear();
-        duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_SLIPSTREAM);
+        duration = (float)kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_SLIPSTREAM);
         if (duration > 0)
         {
-            oss << "slip st: " << duration << " ms";
+            oss << std::fixed << std::setprecision(3) << "slip st: " << duration/100 << " s";
             font->draw(oss.str().c_str(), pos, color_green, false, true);
         }
         else
@@ -1788,10 +1788,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         pos.LowerRightCorner.Y += 0.4f*m_font_height;
         pos.UpperLeftCorner.Y += 0.4f*m_font_height;
         oss.str(""); oss.clear();
-        duration = kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_RUBBER);
+        duration = (float)kart->getSpeedIncreaseTicksLeft(MaxSpeed::MS_INCREASE_RUBBER);
         if (duration > 0)
         {
-            oss << "rubber : " << duration << " ms";
+            oss << std::fixed << std::setprecision(3) << "rubber : " << duration/100 << " s";
             font->draw(oss.str().c_str(), pos, color_green, false, true);
         }
         else
@@ -1810,10 +1810,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
-    duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_TERRAIN);
+    duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_TERRAIN);
     if (duration > 0)
     {
-        oss << "terrain: " << duration << " ms";
+        oss << std::fixed << std::setprecision(3) << "terrain: " << duration/100 << " s";
         font->draw(oss.str().c_str(), pos, color_red, false, true);
     }
     else
@@ -1828,10 +1828,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         pos.LowerRightCorner.Y += 0.4f*m_font_height;
         pos.UpperLeftCorner.Y += 0.4f*m_font_height;
         oss.str(""); oss.clear();
-        duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_BUBBLE);
+        duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_BUBBLE);
         if (duration > 0)
         {
-            oss << "bubble : " << duration << " ms";
+            oss << std::fixed << std::setprecision(3) << "bubble : " << duration/100 << " s";
             font->draw(oss.str().c_str(), pos, color_red, false, true);
         }
         else
@@ -1843,10 +1843,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         pos.LowerRightCorner.Y += 0.4f*m_font_height;
         pos.UpperLeftCorner.Y += 0.4f*m_font_height;
         oss.str(""); oss.clear();
-        duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_SQUASH);
+        duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_SQUASH);
         if (duration > 0)
         {
-            oss << "squash : " << duration << " ms";
+            oss << std::fixed << std::setprecision(3) << "squash : " << duration/100 << " s";
             font->draw(oss.str().c_str(), pos, color_red, false, true);
         }
         else
@@ -1858,10 +1858,10 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         pos.LowerRightCorner.Y += 0.4f*m_font_height;
         pos.UpperLeftCorner.Y += 0.4f*m_font_height;
         oss.str(""); oss.clear();
-        duration = kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_AI);
+        duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_AI);
         if (duration > 0)
         {
-            oss << "AI     : " << duration << " ms";
+            oss << std::fixed << std::setprecision(3) << "AI     : " << duration/100 << " s";
             font->draw(oss.str().c_str(), pos, color_red, false, true);
         }
         else
