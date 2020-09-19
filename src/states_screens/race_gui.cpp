@@ -437,7 +437,7 @@ void RaceGUI::drawGlobalTimer()
 
     core::stringw sw;
     video::SColor time_color = video::SColor(255, 255, 255, 255);
-    int dist_from_right = 10 + m_timer_width;
+    int dist_from_right = 10 + m_timer_width+20;
 
     bool use_digit_font = true;
 
@@ -1675,24 +1675,26 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     font->setScale(0.4f);
     core::recti pos;
     std::ostringstream oss;
+    float duration = 0.0f;
 
-    // current speed / max. speed
+    // current time
     pos.LowerRightCorner = core::vector2di(int(offset.X - 0.2f*meter_width), int(offset.Y - 2.0f*meter_height + 0.4f*m_font_height));
     pos.UpperLeftCorner  = core::vector2di(int(offset.X - 1.2f*meter_width), int(offset.Y - 2.0f*meter_height));
-    oss << std::fixed << std::setprecision(2) << "Speed: " << kart->getSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
+    oss << std::fixed << std::setprecision(3) << "Time : " << World::getWorld()->getTime() << " s";
+    font->draw(oss.str().c_str(), pos, color, false, true);
+
+    // current speed / max. speed
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << std::fixed << std::setprecision(3) << "Speed: " << kart->getSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
     font->draw(oss.str().c_str(), pos, color, false, true);
 
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
-    oss << std::fixed << std::setprecision(2) << "Max. : " << kart->getCurrentMaxSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
+    oss << std::fixed << std::setprecision(3) << "Max. : " << kart->getCurrentMaxSpeed() << " m/s"; // /KILOMETERS_PER_HOUR
     font->draw(oss.str().c_str(), pos, color, false, true);
-
-    /*pos.LowerRightCorner.Y += 0.4f*m_font_height;
-    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
-    oss.str(""); oss.clear();
-    oss << std::fixed << std::setprecision(2) << "Force: " << kart->getActualWheelForce2();
-    font->draw(oss.str().c_str(), pos, color, true, true);*/
 
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
@@ -1706,7 +1708,6 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
     oss << "-----------------";
     font->draw(oss.str().c_str(), pos, color, false, true);
 
-    float duration = 0.0f;
     pos.LowerRightCorner.Y += 0.4f*m_font_height;
     pos.UpperLeftCorner.Y += 0.4f*m_font_height;
     oss.str(""); oss.clear();
@@ -1801,27 +1802,6 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         }
     }
 
-    pos.LowerRightCorner.Y += 0.4f*m_font_height;
-    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
-    oss.str(""); oss.clear();
-    oss << "-----------------";
-    font->draw(oss.str().c_str(), pos, color, false, true);
-
-    pos.LowerRightCorner.Y += 0.4f*m_font_height;
-    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
-    oss.str(""); oss.clear();
-    duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_TERRAIN);
-    if (duration > 0)
-    {
-        oss << std::fixed << std::setprecision(3) << "terrain: " << duration/100 << " s";
-        font->draw(oss.str().c_str(), pos, color_red, false, true);
-    }
-    else
-    {
-        oss << "terrain: ";
-        font->draw(oss.str().c_str(), pos, color, false, true);
-    }
-
     // show those related to item usage
     if (RaceManager::get()->getMinorMode() != RaceManager::MINOR_MODE_TIME_TRIAL)
     {
@@ -1854,22 +1834,18 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
             oss << "squash : ";
             font->draw(oss.str().c_str(), pos, color, false, true);
         }
-
-        pos.LowerRightCorner.Y += 0.4f*m_font_height;
-        pos.UpperLeftCorner.Y += 0.4f*m_font_height;
-        oss.str(""); oss.clear();
-        duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_AI);
-        if (duration > 0)
-        {
-            oss << std::fixed << std::setprecision(3) << "AI     : " << duration/100 << " s";
-            font->draw(oss.str().c_str(), pos, color_red, false, true);
-        }
-        else
-        {
-            oss << "AI     : ";
-            font->draw(oss.str().c_str(), pos, color, false, true);
-        }
     }
+
+    pos.LowerRightCorner.Y += 6.0*0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    oss << "-----------------" << std::endl
+        << "Action    :" << (uint16_t) kart->getControls().getButtonsCompressed() << std::endl
+        << "Steer     :" << kart->getControls().getSteer() << std::endl
+        << "Accel     :" << kart->getControls().getAccel() << std::endl
+        << "Skid      :" << kart->getSkidding()->getSkidFactor() << std::endl
+        << "Skid state:" << (int)kart->getSkidding()->getSkidState() << std::endl;
+    font->draw(oss.str().c_str(), pos, color, false, true);
 
     font->setScale(1.0f);
 }
