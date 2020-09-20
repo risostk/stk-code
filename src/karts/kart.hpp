@@ -366,6 +366,8 @@ public:
      *  from the server information. */
     virtual void setSpeed(float s) OVERRIDE { m_speed = s; }
 
+    virtual MaxSpeed *getMaxSpeed() const OVERRIDE { return m_max_speed; };
+
     // ========================================================================================
     // STEERING and skidding related functions
     // ----------------------------------------------------------------------------------------

@@ -45,6 +45,7 @@ class KartGFX;
 class KartModel;
 class KartProperties;
 class Material;
+class MaxSpeed;
 class Powerup;
 class RenderInfo;
 class SFXBuffer;
@@ -314,6 +315,8 @@ public:
      *  \param category Which category to report on. */
     virtual int getSpeedDecreaseTicksLeft(unsigned int category) const = 0;
     
+    virtual MaxSpeed *getMaxSpeed() const = 0;
+
     // ------------------------------------------------------------------------
     /** Sets the kart AI boost state.
      *  Not pure abstract, since there is no need to implement this e.g. in Ghost.
@@ -553,6 +556,7 @@ public:
     /** Return the confirmed finish ticks (sent by the server)
      *  indicating that this kart has really finished the race. */
     virtual int getNetworkConfirmedFinishTicks() const = 0;
+
 };   // AbstractKart
 
 

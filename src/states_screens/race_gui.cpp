@@ -1802,6 +1802,22 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         }
     }
 
+    pos.LowerRightCorner.Y += 0.4f*m_font_height;
+    pos.UpperLeftCorner.Y += 0.4f*m_font_height;
+    oss.str(""); oss.clear();
+    duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_TERRAIN);
+    if (duration > 0)
+    {
+        oss << std::fixed << std::setprecision(3) << "terrain: " << duration/100 << " s"
+            << " [" << kart->getMaxSpeed()->getSlowdownFraction(MaxSpeed::MS_DECREASE_TERRAIN) << "]";
+        font->draw(oss.str().c_str(), pos, color_red, false, true);
+    }
+    else
+    {
+        oss << "terrain: ";
+        font->draw(oss.str().c_str(), pos, color, false, true);
+    }
+
     // show those related to item usage
     if (RaceManager::get()->getMinorMode() != RaceManager::MINOR_MODE_TIME_TRIAL)
     {
@@ -1811,7 +1827,8 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_BUBBLE);
         if (duration > 0)
         {
-            oss << std::fixed << std::setprecision(3) << "bubble : " << duration/100 << " s";
+            oss << std::fixed << std::setprecision(3) << "bubble : " << duration/100 << " s"
+                << " [" << kart->getMaxSpeed()->getSlowdownFraction(MaxSpeed::MS_DECREASE_BUBBLE) << "]";
             font->draw(oss.str().c_str(), pos, color_red, false, true);
         }
         else
@@ -1826,7 +1843,8 @@ void RaceGUI::drawNumericSpeed2(const AbstractKart *kart,
         duration = (float)kart->getSpeedDecreaseTicksLeft(MaxSpeed::MS_DECREASE_SQUASH);
         if (duration > 0)
         {
-            oss << std::fixed << std::setprecision(3) << "squash : " << duration/100 << " s";
+            oss << std::fixed << std::setprecision(3) << "squash : " << duration/100 << " s"
+                << " [" << kart->getMaxSpeed()->getSlowdownFraction(MaxSpeed::MS_DECREASE_SQUASH) << "]";
             font->draw(oss.str().c_str(), pos, color_red, false, true);
         }
         else

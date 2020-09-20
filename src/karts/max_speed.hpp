@@ -214,5 +214,8 @@ public:
     // ------------------------------------------------------------------------
     /** Returns the additional engine force. */
     float getCurrentAdditionalEngineForce() const { return m_add_engine_force;}
+    /** Returns the slowdown fraction for this category. */
+    float getSlowdownFraction(unsigned int category) const {return m_speed_decrease[category].getSlowdownFraction();}
+
 };   // MaxSpeed
 #endif
