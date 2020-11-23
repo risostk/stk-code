@@ -176,12 +176,12 @@ endif()
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/bullet")
 include_directories(BEFORE "${PROJECT_SOURCE_DIR}/lib/bullet/src")
 
-if(WIN32 OR CMAKE_SYSTEM_NAME MATCHES "BSD")
+if(WIN32 OR CMAKE_SYSTEM_NAME MATCHES "BSD" OR CMAKE_SYSTEM_NAME MATCHES "DragonFly")
     set(LIBRESOLV_LIBRARY)
 elseif (HAIKU)
     find_library(LIBRESOLV_LIBRARY NAMES network socket)
 else()
-   find_library(LIBRESOLV_LIBRARY NAMES resolv libresolv)
+    find_library(LIBRESOLV_LIBRARY NAMES resolv libresolv)
 endif()
 
 # Find system ENet library or build it if missing
@@ -303,6 +303,12 @@ if (NOT SERVER_ONLY)
     else()
         include_directories("${SDL2_INCLUDEDIR}")
         MESSAGE(STATUS "Use system SDL2: ${SDL2_LIBRARY}")
+    endif()
+    # DirectFB. Necessary if system SDL2 is built with DirectFB support.
+    find_path(DIRECTFB_INCLUDEDIR NAMES directfb.h directfb++.h PATH_SUFFIXES directfb include/directfb include PATHS)
+    if (DIRECTFB_INCLUDEDIR)
+        include_directories("${DIRECTFB_INCLUDEDIR}")
+        message(STATUS "Adding DirectFB include directories for DirectFB support in SDL2")
     endif()
 endif()
 
@@ -735,6 +741,19 @@ if(MINGW)
     endif()
 endif()
 
+
+# Find LibGamerzilla library or build it if missing
+if (NOT APPLE)
+    include(FindPkgConfig)
+    pkg_search_module(GAMERZILLA OPTIONAL gamerzilla)
+
+    if (GAMERZILLA_LIBRARIES)
+        message(STATUS "Gamerzilla found")
+        include_directories(${GAMERZILLA_INCLUDE_DIRS})
+        target_link_libraries(supertuxkart ${GAMERZILLA_LIBRARIES})
+        add_definitions(-DGAMERZILLA)
+    endif()
+endif()
 
 # ==== Checking if data folder exists ====
 if(NOT IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data)
