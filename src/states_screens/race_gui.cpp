@@ -1594,7 +1594,7 @@ void RaceGUI::drawNumericSpeed(const AbstractKart *kart,
     pos.UpperLeftCorner = core::vector2di(int(offset.X + 0.65f*meter_width), int(offset.Y - 0.55f*meter_height));
 
     std::ostringstream oss2;
-    oss2 << std::fixed << std::setprecision(1) << kart->getSpeed(); // /KILOMETERS_PER_HOUR
+    oss2 << std::fixed << std::setprecision(1) << kart->getSpeed()/KILOMETERS_PER_HOUR; //
 
     font->draw(oss2.str().c_str(), pos, color, true, true);
 
