@@ -533,6 +533,11 @@ namespace UserConfigParams
             &m_multitouch_group,
             "Draw steering wheel on right side.") );
 
+    PARAM_PREFIX BoolUserConfigParam         m_multitouch_auto_acceleration
+            PARAM_DEFAULT( BoolUserConfigParam(false, "multitouch_auto_acceleration",
+            &m_multitouch_group,
+            "Auto acceleration for multitouch controls.") );
+
     PARAM_PREFIX IntUserConfigParam         m_multitouch_controls
             PARAM_DEFAULT( IntUserConfigParam(0, "multitouch_controls",
             &m_multitouch_group,
@@ -1137,6 +1142,11 @@ namespace UserConfigParams
             PARAM_DEFAULT(  TimeUserConfigParam(0, "addon_last_updated",
                                                 &m_addon_group,
                                         "Time addon-list was updated last.") );
+
+    PARAM_PREFIX TimeUserConfigParam        m_latest_addon_time
+            PARAM_DEFAULT(  TimeUserConfigParam(0, "latest_addon_time",
+                                                &m_addon_group,
+                                        "Latest approved addon time.") );
 
     PARAM_PREFIX StringUserConfigParam      m_language
             PARAM_DEFAULT( StringUserConfigParam("system", "language",
