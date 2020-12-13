@@ -217,6 +217,8 @@ public:
     virtual bool updateAndDelete(int ticks) OVERRIDE;
     virtual bool hit(AbstractKart* kart, PhysicalObject* obj=NULL) OVERRIDE;
     virtual void setAnimation(AbstractKartAnimation *animation) OVERRIDE;
+    virtual const core::stringw getHitString(const AbstractKart *kart_victim,
+                                             const AbstractKart *kart_attacker) const;
     // ------------------------------------------------------------------------
     /** This object does not create an explosion, all affects on
      *  karts are handled by this hit() function. */

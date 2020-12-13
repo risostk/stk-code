@@ -42,6 +42,8 @@
 #include "modes/capture_the_flag.hpp"
 #include "network/network_string.hpp"
 #include "network/rewind_manager.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/translation.hpp"
 
 #define SWAT_POS_OFFSET        core::vector3df(0.0, 0.2f, -0.4f)
 #define SWAT_ANGLE_MIN  45
@@ -402,6 +404,10 @@ void Swatter::squashThingsAround()
 
     if (success)
     {
+        RaceGUIBase* gui = World::getWorld()->getRaceGUI();
+        gui->addMessage(getHitString(m_closest_kart, m_kart),
+                        NULL, 3.0f, video::SColor(255, 255, 255, 255), false, false, true);
+
         World::getWorld()->kartHit(m_closest_kart->getWorldKartId(),
             m_kart->getWorldKartId());
 
@@ -437,6 +443,28 @@ void Swatter::squashThingsAround()
 
     // TODO: squash items
 }   // squashThingsAround
+
+// ----------------------------------------------------------------------------
+/** Picks a random message to be displayed when a kart is hit by a swatter
+ *  \param kart The kart that was hit.
+ *  \returns The string to display.
+ */
+const core::stringw Swatter::getHitString(const AbstractKart *kart_victim,
+                                          const AbstractKart *kart_attacker) const
+{
+    const int SWATTER_STRINGS_AMOUNT = 3;
+    RandomGenerator r;
+    switch (r.get(SWATTER_STRINGS_AMOUNT))
+    {
+        //I18N: shown when hit by swatter. %1 is the attacker, %0 is the victim.
+    case 0 : return _("%s thinks %s is a big fly.", kart_attacker->getName(), kart_victim->getName());
+        //I18N: shown when hit by swatter. %1 is the attacker, %0 is the victim.
+    case 1 : return _("%s flattens %s.", kart_attacker->getName(), kart_victim->getName());
+        //I18N: shown when hit by swatter. %s is the victim
+    case 2 : return _("%s feels flat today.", kart_victim->getName());
+    default: assert(false); return L"";  //  avoid compiler warning
+    }
+}
 
 // ----------------------------------------------------------------------------
 void Swatter::restoreState(BareNetworkString* buffer)

@@ -194,6 +194,8 @@ public:
                               PowerupManager::PowerupType type);
     void                      updateGraphics(float dt) OVERRIDE;
     virtual bool              updateAndDelete(int ticks);
+    virtual const core::stringw getHitString(const AbstractKart *kart_victim,
+                                             const AbstractKart *kart_attacker) const = 0;
     virtual void              setAnimation(AbstractKartAnimation *animation);
     virtual HitEffect*        getHitEffect() const;
     bool                      isOwnerImmunity(const AbstractKart *kart_hit) const;

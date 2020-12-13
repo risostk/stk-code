@@ -25,6 +25,8 @@
 #include "io/xml_node.hpp"
 #include "karts/abstract_kart.hpp"
 #include "modes/linear_world.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/translation.hpp"
 
 #include "utils/log.hpp" //TODO: remove after debugging is done
 
@@ -68,6 +70,49 @@ void Bowling::init(const XMLNode &node, scene::IMesh *bowling)
 
     node.get("force-to-target", &m_st_force_to_target);
 }   // init
+
+// ----------------------------------------------------------------------------
+/** Picks a random message to be displayed when a kart is hit by a bowling
+ *  ball. This function picks a different message if a kart hit itself.
+ *  \param kart The kart that was hit.
+ *  \returns The string to display.
+ */
+const core::stringw Bowling::getHitString(const AbstractKart *kart_victim,
+                                          const AbstractKart *kart_attacker) const
+{
+    RandomGenerator r;
+    if (kart_victim != m_owner)
+    {
+        const int BOWLING_STRINGS_AMOUNT = 3;
+        switch (r.get(BOWLING_STRINGS_AMOUNT))
+        {
+            //I18N: shown when hit by bowling ball. %1 is the attacker, %0 is
+            // the victim.
+            case 0 : return _("%s will not go bowling with %s again.", kart_victim->getName(), kart_attacker->getName());
+            //I18N: shown when hit by bowling ball. %1 is the attacker, %0 is
+            // the victim.
+            case 1 : return _("%s strikes %s!", kart_attacker->getName(), kart_victim->getName());
+            //I18N: shown when hit by bowling ball. %1 is the attacker, %0 is
+            // the victim.
+            case 2 : return _("%s is bowled over by %s.", kart_victim->getName(), kart_attacker->getName());
+            default: assert(false); return L"";  //  avoid compiler warning
+        }
+    }
+    else
+    {
+        const int SELFBOWLING_STRINGS_AMOUNT = 3;
+        switch (r.get(SELFBOWLING_STRINGS_AMOUNT))
+        {
+            //I18N: shown when hit by own bowling ball. %s is the kart.
+            case 0 : return _("%s is practicing with a blue, big, spheric yo-yo.", kart_victim->getName());
+            //I18N: shown when hit by own bowling ball. %s is the kart.
+            case 1 : return _("%s is the world master of the boomerang ball.", kart_victim->getName());
+            //I18N: shown when hit by own bowling ball. %s is the kart.
+            case 2 : return _("%s should play (rubber) darts instead of bowling.", kart_victim->getName());
+            default: assert(false); return L"";  //  avoid compiler warning
+        }   // switch
+    }   // if kart_hit==owner
+}   // getHitString
 
 // ----------------------------------------------------------------------------
 /** Updates the bowling ball ineach frame. If this function returns true, the

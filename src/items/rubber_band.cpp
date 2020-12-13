@@ -34,6 +34,27 @@
 #include "race/race_manager.hpp"
 #include "utils/mini_glm.hpp"
 #include "utils/string_utils.hpp"
+#include "utils/translation.hpp"
+
+core::stringw getPlungerString(const AbstractKart *kart_victim,
+                               const AbstractKart *kart_attacker)
+{
+    const int PLUNGER_STRINGS_AMOUNT = 3;
+
+    RandomGenerator r;
+    const int id = r.get(PLUNGER_STRINGS_AMOUNT);
+
+    switch (id)
+    {
+        //I18N: shown when hit by plunger. %0 is the victim, %1 is the attacker
+        case 0: return _("%s bites %s's bait.", kart_victim->getName(), kart_attacker->getName());
+        //I18N: shown when hit by plunger. %0 is the victim, %1 is the attacker
+        case 1: return _("%s latches onto %s for a free ride.", kart_attacker->getName(), kart_victim->getName());
+        //I18N: shown when hit by plunger. %0 is the victim, %1 is the attacker
+        case 2: return _("%s tests a tractor beam on %s.", kart_attacker->getName(), kart_victim->getName());
+        default: assert(false); return L"";  // avoid warning about no return value
+    }
+}
 
 /** RubberBand constructor. It creates a simple quad and attaches it to the
  *  root(!) of the graph. It's easier this way to get the right coordinates
@@ -277,6 +298,10 @@ void RubberBand::hit(AbstractKart *kart_hit, const Vec3 *track_xyz)
 
         m_hit_kart       = kart_hit;
         m_attached_state = RB_TO_KART;
+
+        RaceGUIBase* gui = World::getWorld()->getRaceGUI();
+        gui->addMessage(getPlungerString(kart_hit, m_owner),
+                        NULL, 3.0f, video::SColor(255, 255, 255, 255), false, false, true);
         return;
     }
 

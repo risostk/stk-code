@@ -36,7 +36,59 @@
 #include "physics/triangle_mesh.hpp"
 #include "tracks/track.hpp"
 #include "utils/string_utils.hpp"
+#include "utils/translation.hpp"
 #include "utils/log.hpp" //TODO: remove after debugging is done
+
+core::stringw getAnchorString(const AbstractKart *kart_victim)
+{
+    const int ANCHOR_STRINGS_COUNT = 3;
+
+    RandomGenerator r;
+    const int id = r.get(ANCHOR_STRINGS_COUNT);
+
+    switch (id)
+    {
+        //I18N: shown when anchor applied. %s is the victim.
+        case 0: return _("Arrr, %s dropped anchor, Captain!", kart_victim->getName());
+        case 1: return _("%s pays the next round of grog!", kart_victim->getName());
+        case 2: return _("%s is a mighty pirate!", kart_victim->getName());
+        default: assert(false); return L"";   // avoid compiler warning.
+    }
+}   // getAnchorString
+
+//-----------------------------------------------------------------------------
+core::stringw getParachuteString()
+{
+    const int PARACHUTE_STRINGS_COUNT = 3;
+
+    RandomGenerator r;
+    const int id = r.get(PARACHUTE_STRINGS_COUNT);
+
+    switch (id)
+    {
+        case 0: return _("Geronimo!!!"); // Parachutist shout
+        case 1: return _("The Space Shuttle has landed!");
+        case 2: return _("Do you want to fly kites?");
+        default: assert(false); return  L"";  // avoid compiler warning
+    }
+}   // getParachuteString
+
+//-----------------------------------------------------------------------------
+core::stringw getSwapperString()
+{
+    const int SWAPPER_STRINGS_COUNT = 3;
+
+    RandomGenerator r;
+    const int id = r.get(SWAPPER_STRINGS_COUNT);
+
+    switch (id)
+    {
+        case 0: return _("Magic, son. Nothing else in the world smells like that.");
+        case 1: return _("A wizard did it!");
+        case 2: return _("Banana? Box? Banana? Box? Banana? Box?");
+        default: assert(false); return L"";  // avoid compiler warning
+    }
+}   // getSwapperString
 
 //-----------------------------------------------------------------------------
 /** Constructor, stores the kart to which this powerup belongs.
@@ -135,6 +187,7 @@ void Powerup::update(int ticks)
  */
 void Powerup::set(PowerupManager::PowerupType type, int n)
 {
+    //n = 6;
     if (m_type==type)
     {
         m_number+=n;
@@ -271,6 +324,7 @@ void Powerup::use()
 
     m_number--;
     World *world = World::getWorld();
+    RaceGUIBase* gui = world->getRaceGUI();
     ItemManager* im = Track::getCurrentTrack()->getItemManager();
     switch (m_type)
     {
@@ -284,6 +338,9 @@ void Powerup::use()
             {
                 m_sound_use->setPosition(m_kart->getXYZ());
                 m_sound_use->play();
+
+                gui->addMessage(getSwapperString(), NULL, 3.0f,
+                            video::SColor(255, 255, 255, 255), false, false, true);
             }
             break;
         }
@@ -405,6 +462,9 @@ void Powerup::use()
                         m_sound_use->setPosition(m_kart->getXYZ());
 
                     m_sound_use->play();
+
+                    gui->addMessage(getAnchorString(kart), NULL, 3.0f,
+                                video::SColor(255, 255, 255, 255), false, false, true);
                 }
                 break;
             }
@@ -467,6 +527,9 @@ void Powerup::use()
                 else if(player_kart)
                     m_sound_use->setPosition(player_kart->getXYZ());
                 m_sound_use->play();
+
+                gui->addMessage(getParachuteString(), NULL, 3.0f,
+                            video::SColor(255, 255, 255, 255), false, false, true);
             }
         }
         break;
