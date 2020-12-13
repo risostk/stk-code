@@ -26,6 +26,7 @@
 #include "items/attachment.hpp"
 #include "items/projectile_manager.hpp"
 #include "karts/abstract_kart.hpp"
+#include "karts/controller/controller.hpp"
 #include "karts/kart_properties.hpp"
 #include "modes/linear_world.hpp"
 #include "network/network_string.hpp"
@@ -374,10 +375,10 @@ const core::stringw RubberBall::getHitString(const AbstractKart *kart_victim,
     {
         //I18N: shown when a player is hit by a rubber ball. %1 is the
         // attacker, %0 is the victim.
-        case 0: return _("%s is being bounced around.", kart_victim->getName());
+        case 0: return _("%s is being bounced around.", kart_victim->getController()->getName());
         //I18N: shown when a player is hit by a rubber ball. %1 is the
         // attacker, %0 is the victim.
-        case 1: return _("Fetch the ball, %s!", kart_victim->getName());
+        case 1: return _("Fetch the ball, %s!", kart_victim->getController()->getName());
         default:assert(false); return L"";   // avoid compiler warning
     }
 }   // getHitString

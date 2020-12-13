@@ -151,9 +151,9 @@ const core::stringw Plunger::getHitString(const AbstractKart *kart_victim,
     switch (r.get(PLUNGER_IN_FACE_STRINGS_AMOUNT))
     {
         //I18N: shown when a player receives a plunger in his face
-        case 0: return _("%s gets a fancy mask from %s.", kart_victim->getName(), kart_attacker->getName());
+        case 0: return _("%s gets a fancy mask from %s.", kart_victim->getController()->getName(), kart_attacker->getController()->getName());
         //I18N: shown when a player receives a plunger in his face
-        case 1: return _("%s merges %s's face with a plunger.", kart_attacker->getName(), kart_victim->getName());
+        case 1: return _("%s merges %s's face with a plunger.", kart_attacker->getController()->getName(), kart_victim->getController()->getName());
         default:assert(false); return L"";   // avoid compiler warning
     }
 }   // getHitString

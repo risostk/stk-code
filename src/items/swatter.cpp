@@ -457,11 +457,11 @@ const core::stringw Swatter::getHitString(const AbstractKart *kart_victim,
     switch (r.get(SWATTER_STRINGS_AMOUNT))
     {
         //I18N: shown when hit by swatter. %1 is the attacker, %0 is the victim.
-    case 0 : return _("%s thinks %s is a big fly.", kart_attacker->getName(), kart_victim->getName());
+    case 0 : return _("%s thinks %s is a big fly.", kart_attacker->getController()->getName(), kart_victim->getController()->getName());
         //I18N: shown when hit by swatter. %1 is the attacker, %0 is the victim.
-    case 1 : return _("%s flattens %s.", kart_attacker->getName(), kart_victim->getName());
+    case 1 : return _("%s flattens %s.", kart_attacker->getController()->getName(), kart_victim->getController()->getName());
         //I18N: shown when hit by swatter. %s is the victim
-    case 2 : return _("%s feels flat today.", kart_victim->getName());
+    case 2 : return _("%s feels flat today.", kart_victim->getController()->getName());
     default: assert(false); return L"";  //  avoid compiler warning
     }
 }

@@ -23,6 +23,7 @@
 
 #include "io/xml_node.hpp"
 #include "karts/abstract_kart.hpp"
+#include "karts/controller/controller.hpp"
 #include "utils/constants.hpp"
 #include "utils/random_generator.hpp"
 #include "utils/string_utils.hpp"
@@ -68,13 +69,13 @@ const core::stringw Cake::getHitString(const AbstractKart *kart_victim,
     switch (r.get(CAKE_STRINGS_AMOUNT))
     {
         //I18N: shown when hit by cake. %1 is the attacker, %0 is the victim.
-        case 0: return _("%s eats too much of %s's cake.", kart_victim->getName(), kart_attacker->getName());
+        case 0: return _("%s eats too much of %s's cake.", kart_victim->getController()->getName(), kart_attacker->getController()->getName());
         //I18N: shown when hit by cake. %1 is the attacker, %0 is the victim.
-        case 1: return _("%s is dubious of %s's cooking skills.", kart_victim->getName(), kart_attacker->getName());
+        case 1: return _("%s is dubious of %s's cooking skills.", kart_victim->getController()->getName(), kart_attacker->getController()->getName());
         //I18N: shown when hit by cake. %1 is the attacker, %0 is the victim.
-        case 2: return _("%s should not play with %s's lunch.", kart_victim->getName(), kart_attacker->getName());
+        case 2: return _("%s should not play with %s's lunch.", kart_victim->getController()->getName(), kart_attacker->getController()->getName());
         //I18N: shown when hit by cake. %1 is the attacker, %0 is the victim.
-        case 3: return _("%s ruins %s's cakeless diet.", kart_attacker->getName(), kart_victim->getName());
+        case 3: return _("%s ruins %s's cakeless diet.", kart_attacker->getController()->getName(), kart_victim->getController()->getName());
         default: assert(false); return L"";   // avoid compiler warning
     }
 }   // getHitString

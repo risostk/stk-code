@@ -24,6 +24,7 @@
 #include "graphics/material.hpp"
 #include "io/xml_node.hpp"
 #include "karts/abstract_kart.hpp"
+#include "karts/controller/controller.hpp"
 #include "modes/linear_world.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
@@ -88,13 +89,13 @@ const core::stringw Bowling::getHitString(const AbstractKart *kart_victim,
         {
             //I18N: shown when hit by bowling ball. %1 is the attacker, %0 is
             // the victim.
-            case 0 : return _("%s will not go bowling with %s again.", kart_victim->getName(), kart_attacker->getName());
+            case 0 : return _("%s will not go bowling with %s again.", kart_victim->getController()->getName(), kart_attacker->getController()->getName());
             //I18N: shown when hit by bowling ball. %1 is the attacker, %0 is
             // the victim.
-            case 1 : return _("%s strikes %s!", kart_attacker->getName(), kart_victim->getName());
+            case 1 : return _("%s strikes %s!", kart_attacker->getController()->getName(), kart_victim->getController()->getName());
             //I18N: shown when hit by bowling ball. %1 is the attacker, %0 is
             // the victim.
-            case 2 : return _("%s is bowled over by %s.", kart_victim->getName(), kart_attacker->getName());
+            case 2 : return _("%s is bowled over by %s.", kart_victim->getController()->getName(), kart_attacker->getController()->getName());
             default: assert(false); return L"";  //  avoid compiler warning
         }
     }
