@@ -556,12 +556,18 @@ bool Flyable::hit(AbstractKart *kart_hit, PhysicalObject* object)
     // the owner of this flyable should not be hit by his own flyable
     if(isOwnerImmunity(kart_hit)) return false;
 
+#ifndef SERVER_ONLY
     if (kart_hit != NULL && !kart_hit->isShielded())
     {
         RaceGUIBase* gui = World::getWorld()->getRaceGUI();
-        gui->addMessage(getHitString(kart_hit, m_owner), NULL, 3.0f,
+        // disable hit message for network
+        if(!(NetworkConfig::get()->isNetworking() && NetworkConfig::get()->isClient()))
+        {
+            gui->addMessage(getHitString(kart_hit, m_owner), NULL, 3.0f,
                             video::SColor(255, 255, 255, 255), false, false, true);
+        }
     }
+#endif
 
     m_has_hit_something=true;
 

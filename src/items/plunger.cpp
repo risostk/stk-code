@@ -30,6 +30,7 @@
 #include "karts/controller/controller.hpp"
 #include "karts/kart_properties.hpp"
 #include "modes/linear_world.hpp"
+#include "network/network_config.hpp"
 #include "network/network_string.hpp"
 #include "physics/physical_object.hpp"
 #include "physics/physics.hpp"
@@ -230,9 +231,15 @@ bool Plunger::hit(AbstractKart *kart, PhysicalObject *obj)
                 SFXManager::get()->quickSound("plunger");
             }
 
-            RaceGUIBase* gui = World::getWorld()->getRaceGUI();
-            gui->addMessage(getHitString(kart, m_owner), NULL, 3.0f,
-                            video::SColor(255, 255, 255, 255), false, false, true);
+#ifndef SERVER_ONLY
+            // disable hit message for network
+            if(!(NetworkConfig::get()->isNetworking() && NetworkConfig::get()->isClient()))
+            {
+                RaceGUIBase* gui = World::getWorld()->getRaceGUI();
+                gui->addMessage(getHitString(kart, m_owner), NULL, 3.0f,
+                                video::SColor(255, 255, 255, 255), false, false, true);
+            }
+#endif
         }
 
         m_keep_alive = 0;

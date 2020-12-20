@@ -29,6 +29,7 @@
 #include "karts/controller/controller.hpp"
 #include "karts/kart_properties.hpp"
 #include "modes/linear_world.hpp"
+#include "network/network_config.hpp"
 #include "network/network_string.hpp"
 #include "network/rewind_info.hpp"
 #include "network/rewind_manager.hpp"
@@ -369,17 +370,25 @@ void RubberBall::init(const XMLNode &node, scene::IMesh *rubberball)
 const core::stringw RubberBall::getHitString(const AbstractKart *kart_victim,
                                              const AbstractKart *kart_attacker) const
 {
-    const int COUNT = 2;
-    RandomGenerator r;
-    switch (r.get(COUNT))
+    // disable hit message for network
+    if(!(NetworkConfig::get()->isNetworking() && NetworkConfig::get()->isClient()))
     {
-        //I18N: shown when a player is hit by a rubber ball. %1 is the
-        // attacker, %0 is the victim.
-        case 0: return _("%s is being bounced around.", kart_victim->getController()->getName());
-        //I18N: shown when a player is hit by a rubber ball. %1 is the
-        // attacker, %0 is the victim.
-        case 1: return _("Fetch the ball, %s!", kart_victim->getController()->getName());
-        default:assert(false); return L"";   // avoid compiler warning
+        const int COUNT = 2;
+        RandomGenerator r;
+        switch (r.get(COUNT))
+        {
+            //I18N: shown when a player is hit by a rubber ball. %1 is the
+            // attacker, %0 is the victim.
+            case 0: return _("%s is being bounced around.", kart_victim->getController()->getName());
+            //I18N: shown when a player is hit by a rubber ball. %1 is the
+            // attacker, %0 is the victim.
+            case 1: return _("Fetch the ball, %s!", kart_victim->getController()->getName());
+            default:assert(false); return L"";   // avoid compiler warning
+        }
+    }
+    else
+    {
+        return L"";
     }
 }   // getHitString
 
