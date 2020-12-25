@@ -19,6 +19,7 @@
 
 #include "config/user_config.hpp"
 #include "guiengine/widgets/check_box_widget.hpp"
+#include "guiengine/widgets/label_widget.hpp"
 #include "guiengine/widgets/spinner_widget.hpp"
 #include "states_screens/options/options_screen_ui.hpp"
 #include "utils/translation.hpp"
@@ -62,6 +63,11 @@ void CustomCameraSettingsDialog::beforeAddingWidgets()
     getWidget<SpinnerWidget>("backward_camera_angle")->setRange(0 , 45);
     if (UserConfigParams::m_camera_present == 1) // Standard camera
     {
+        getWidget<LabelWidget>("camera_name")->setText(_("Standard"), false);
+        getWidget<SpinnerWidget>("fov")->setValue(UserConfigParams::m_standard_camera_fov);
+        getWidget<SpinnerWidget>("camera_distance")->setFloatValue(UserConfigParams::m_standard_camera_distance);
+        getWidget<SpinnerWidget>("camera_angle")->setValue(UserConfigParams::m_standard_camera_forward_up_angle);
+        getWidget<SpinnerWidget>("backward_camera_angle")->setValue(UserConfigParams::m_standard_camera_backward_up_angle);
         getWidget<CheckBoxWidget>("camera_smoothing")->setState(UserConfigParams::m_standard_camera_forward_smoothing);
         getWidget<CheckBoxWidget>("use_soccer_camera")->setState(UserConfigParams::m_standard_reverse_look_use_soccer_cam);
         // Not allowed to change fov, distance, and angles. Only allow to change smoothing and follow soccer
@@ -72,6 +78,11 @@ void CustomCameraSettingsDialog::beforeAddingWidgets()
     }
     else if (UserConfigParams::m_camera_present == 2) // Drone chase camera
     {
+        getWidget<LabelWidget>("camera_name")->setText(_("Drone chase"), false);
+        getWidget<SpinnerWidget>("fov")->setValue(UserConfigParams::m_drone_camera_fov);
+        getWidget<SpinnerWidget>("camera_distance")->setFloatValue(UserConfigParams::m_drone_camera_distance);
+        getWidget<SpinnerWidget>("camera_angle")->setValue(UserConfigParams::m_drone_camera_forward_up_angle);
+        getWidget<SpinnerWidget>("backward_camera_angle")->setValue(UserConfigParams::m_drone_camera_backward_up_angle);
         getWidget<CheckBoxWidget>("camera_smoothing")->setState(UserConfigParams::m_drone_camera_forward_smoothing);
         getWidget<CheckBoxWidget>("use_soccer_camera")->setState(UserConfigParams::m_drone_reverse_look_use_soccer_cam);
         // Not allowed to change fov, distance, and angles. Only allow to change smoothing and follow soccer
@@ -82,6 +93,7 @@ void CustomCameraSettingsDialog::beforeAddingWidgets()
     }
     else // Custom camera
     {
+        getWidget<LabelWidget>("camera_name")->setText(_("Custom"), false);
         getWidget<SpinnerWidget>("fov")->setValue(UserConfigParams::m_saved_camera_fov);
         getWidget<SpinnerWidget>("camera_distance")->setFloatValue(UserConfigParams::m_saved_camera_distance);
         getWidget<SpinnerWidget>("camera_angle")->setValue(UserConfigParams::m_saved_camera_forward_up_angle);
@@ -128,6 +140,28 @@ GUIEngine::EventPropagation CustomCameraSettingsDialog::processEvent(const std::
         OptionsScreenUI::getInstance()->updateCameraPresetSpinner();
         m_self_destroy = true;
         return GUIEngine::EVENT_BLOCK;
+    }
+    else if (eventSource == "reset") // discard all the changes
+    {
+        if (UserConfigParams::m_camera_present == 1) // Standard camera
+        {
+            getWidget<CheckBoxWidget>("camera_smoothing")->setState(UserConfigParams::m_standard_camera_forward_smoothing);
+            getWidget<CheckBoxWidget>("use_soccer_camera")->setState(UserConfigParams::m_standard_reverse_look_use_soccer_cam);
+        }
+        else if (UserConfigParams::m_camera_present == 2) // Drone chase camera
+        {
+            getWidget<CheckBoxWidget>("camera_smoothing")->setState(UserConfigParams::m_drone_camera_forward_smoothing);
+            getWidget<CheckBoxWidget>("use_soccer_camera")->setState(UserConfigParams::m_drone_reverse_look_use_soccer_cam);
+        }
+        else // Custom camera
+        {
+            getWidget<SpinnerWidget>("fov")->setValue(UserConfigParams::m_saved_camera_fov);
+            getWidget<SpinnerWidget>("camera_distance")->setFloatValue(UserConfigParams::m_saved_camera_distance);
+            getWidget<SpinnerWidget>("camera_angle")->setValue(UserConfigParams::m_saved_camera_forward_up_angle);
+            getWidget<CheckBoxWidget>("camera_smoothing")->setState(UserConfigParams::m_saved_camera_forward_smoothing);
+            getWidget<SpinnerWidget>("backward_camera_angle")->setValue(UserConfigParams::m_saved_camera_backward_up_angle);
+            getWidget<CheckBoxWidget>("use_soccer_camera")->setState(UserConfigParams::m_saved_reverse_look_use_soccer_cam);
+        }
     }
 #endif
     return GUIEngine::EVENT_LET;
