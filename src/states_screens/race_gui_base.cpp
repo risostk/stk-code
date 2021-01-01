@@ -110,6 +110,7 @@ RaceGUIBase::RaceGUIBase()
     m_gauge_full_bright     = irr_driver->getTexture(FileManager::GUI_ICON, "gauge_full_bright.png");
     m_gauge_empty           = irr_driver->getTexture(FileManager::GUI_ICON, "gauge_empty.png");
     m_gauge_goal            = irr_driver->getTexture(FileManager::GUI_ICON, "gauge_goal.png");
+    m_gauge_full_icon       = irr_driver->getTexture(FileManager::GUI_ICON, "icons-frame_nitro_full.png");
     m_lap_flag              = irr_driver->getTexture(FileManager::GUI_ICON, "lap_flag.png");
     m_dist_show_overlap     = 2;
     m_icons_inertia         = 2;

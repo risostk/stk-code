@@ -835,6 +835,12 @@ void RaceGUI::drawGlobalMiniMap()
             font->draw(kart->getController()->getName().subString(0,1), posNumber, video::SColor(255, 255, 255, 255));
         }
 
+        // show the nitro meter
+        if ((has_teams || is_local) && m_gauge_full_icon != NULL)
+        {
+            drawEnergyMeterIcon(position.UpperLeftCorner.X, position.LowerRightCorner.Y,
+                                2*marker_half_size, kart);
+        }
     }   // for i<getNumKarts
 
     // Draw checklines on the minimap
@@ -1023,6 +1029,91 @@ void RaceGUI::drawEnergyMeter(int x, int y, const AbstractKart *kart,
 
         drawMeterTexture(m_gauge_goal, vertices, count);
     }
+#endif
+}   // drawEnergyMeter
+
+//-----------------------------------------------------------------------------
+/** Energy meter that gets filled with nitro. Plot around kart icons.
+ *  \param x X position of the meter on minimap.
+ *  \param y Y position of the meter on minimap.
+ *  \param icon_size size of the icon to be drawn on minimap.
+ *  \param kart Kart to display the data for.
+ */
+void RaceGUI::drawEnergyMeterIcon(int x, int y, int icon_size,
+                                  const AbstractKart *kart)
+{
+#ifndef SERVER_ONLY
+
+    // get the amount of nitro, in terms of fraction: 0-empty, 1-full
+    float state = (float)(kart->getEnergy()) / kart->getKartProperties()->getNitroMax();
+    if (state < 0.0f) state = 0.0f;
+    else if (state > 1.0f) state = 1.0f;
+
+    core::vector2df offset;
+    offset.X = (float)x;
+    offset.Y = (float)y;
+
+    // The positions for A to G are defined here.
+    const int vertices_count = 7;
+
+    core::vector2df position[vertices_count];
+    position[0].X = 0.5f;//A
+    position[0].Y = 0.5f;//A
+    position[1].X = 0.5f;//B
+    position[1].Y = 0.0f;//B
+    position[2].X = 1.0f;//C
+    position[2].Y = 0.0f;//C
+    position[3].X = 1.0f;//D
+    position[3].Y = 1.0f;//D
+    position[4].X = 0.0f;//E
+    position[4].Y = 1.0f;//E
+    position[5].X = 0.0f;//F
+    position[5].Y = 0.0f;//F
+    position[6].X = 0.4999f;//G (same as point B)
+    position[6].Y = 0.0f;//G
+
+    // The states at which different polygons must be used.
+    float threshold[vertices_count-2];
+    threshold[0] = 0.125f; //for gauge drawing
+    threshold[1] = 0.375f;
+    threshold[2] = 0.625f;
+    threshold[3] = 0.875f;
+    threshold[4] = 1.0f;
+
+    // Filling (current state)
+    float state_angle = state* 2.0f * M_PI; // change to angle (state=1: full circle, 2 PI)
+    if (state > 0.0f)
+    {
+        video::S3DVertex vertices[vertices_count];
+
+        // state2: change from the polar coordinate to the rectangle one
+        float state2;
+        if (state <= 0.125f)
+        {
+            state2 = 0.125f*tanf(state_angle);
+        }
+        else if (state <= 0.375f)
+        {
+            state2 = 0.25f + 0.125f*tanf(state_angle - M_PI_2);
+        }
+        else if (state <= 0.625f)
+        {
+            state2 = 0.5f + 0.125f*tanf(state_angle - M_PI);
+        }
+        else if (state <= 0.875f)
+        {
+            state2 = 0.75f + 0.125f*tanf(state_angle - 3.0f * M_PI_2);
+        }
+        else
+        {
+            state2 = 1.0f - 0.125f*tanf(2.0f * M_PI - state_angle);
+        }
+        unsigned int count = computeVerticesForMeter(position, threshold, vertices, vertices_count,
+                                                     state2, icon_size, icon_size, offset);
+
+        drawMeterTexture(m_gauge_full_icon, vertices, count);
+    }
+
 #endif
 }   // drawEnergyMeter
 
@@ -1317,10 +1408,10 @@ void RaceGUI::drawMeterTexture(video::ITexture *meter_texture, video::S3DVertex 
  *  at B with 0 and at C when it reaches the first threshold.
  *  If the measure is between the first and second thresholds, the function will create a quad ABCw,
  *  with w varying in the same way than v.
- *  If the measure exceds the higher threshold, the function will return the poly ABCDE.
+ *  If the measure exceeds the higher threshold, the function will return the poly ABCDE.
  *  
  *  \param position The relative positions of the vertices.
- *  \param threshold The thresholds at which the variable point switch from a segment to the next.
+ *  \param threshold The thresholds at which the variable point switches from a segment to the next.
  *                   The size of this array should be smaller by two than the position array.
  *                   The last threshold determines the measure over which the meter is full
  *  \param vertices Where the results of the computation are put, for use by the calling function.

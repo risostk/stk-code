@@ -125,6 +125,8 @@ private:
     void drawEnergyMeter       (int x, int y, const AbstractKart *kart,
                                 const core::recti &viewport,
                                 const core::vector2df &scaling);
+    void drawEnergyMeterIcon   (int x, int y, int icon_size,
+                                const AbstractKart *kart);
     void drawSpeedEnergyRank   (const AbstractKart* kart,
                                 const core::recti &viewport,
                                 const core::vector2df &scaling, float dt);
