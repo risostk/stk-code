@@ -112,6 +112,22 @@ void OptionsScreenVideo::initPresets()
         true  /* motionblur */, true  /* depth of field */
     });
 
+    m_scale_rtts_custom_presets.push_back({ 0.3f });
+    m_scale_rtts_custom_presets.push_back({ 0.35f });
+    m_scale_rtts_custom_presets.push_back({ 0.4f });
+    m_scale_rtts_custom_presets.push_back({ 0.45f });
+    m_scale_rtts_custom_presets.push_back({ 0.5f });
+    m_scale_rtts_custom_presets.push_back({ 0.55f });
+    m_scale_rtts_custom_presets.push_back({ 0.6f });
+    m_scale_rtts_custom_presets.push_back({ 0.65f });
+    m_scale_rtts_custom_presets.push_back({ 0.7f });
+    m_scale_rtts_custom_presets.push_back({ 0.75f });
+    m_scale_rtts_custom_presets.push_back({ 0.8f });
+    m_scale_rtts_custom_presets.push_back({ 0.85f });
+    m_scale_rtts_custom_presets.push_back({ 0.9f });
+    m_scale_rtts_custom_presets.push_back({ 0.95f });
+    m_scale_rtts_custom_presets.push_back({ 1.0f });
+
 }   // initPresets
 
 // --------------------------------------------------------------------------------------------
@@ -240,6 +256,27 @@ void OptionsScreenVideo::init()
 
     vsync->setTooltip(vsync_tooltip);
 #endif
+
+    // Setup Render Resolution (scale_rtts) spinner
+    GUIEngine::SpinnerWidget* scale_rtts = getWidget<GUIEngine::SpinnerWidget>("scale_rtts");
+    assert( scale_rtts != NULL );
+
+    scale_rtts->clearLabels();
+    scale_rtts->addLabel(_("30%%"));
+    scale_rtts->addLabel(_("35%%"));
+    scale_rtts->addLabel(_("40%%"));
+    scale_rtts->addLabel(_("45%%"));
+    scale_rtts->addLabel(_("50%%"));
+    scale_rtts->addLabel(_("55%%"));
+    scale_rtts->addLabel(_("60%%"));
+    scale_rtts->addLabel(_("65%%"));
+    scale_rtts->addLabel(_("70%%"));
+    scale_rtts->addLabel(_("75%%"));
+    scale_rtts->addLabel(_("80%%"));
+    scale_rtts->addLabel(_("85%%"));
+    scale_rtts->addLabel(_("90%%"));
+    scale_rtts->addLabel(_("95%%"));
+    scale_rtts->addLabel(_("100%%"));
 
     // ---- video modes
     DynamicRibbonWidget* res = getWidget<DynamicRibbonWidget>("resolutions");
@@ -395,6 +432,7 @@ void OptionsScreenVideo::init()
     // --- set gfx settings values
     updateGfxSlider();
     updateBlurSlider();
+    updateScaleRTTsSlider();
 
     // ---- forbid changing resolution or animation settings from in-game
     // (we need to disable them last because some items can't be edited when
@@ -406,6 +444,8 @@ void OptionsScreenVideo::init()
     applyBtn->setActive(!in_game);
     gfx->setActive(!in_game);
     getWidget<ButtonWidget>("custom")->setActive(!in_game);
+    if (getWidget<SpinnerWidget>("scale_rtts")->isActivated())
+        getWidget<SpinnerWidget>("scale_rtts")->setActive(!in_game);
     
 #if defined(MOBILE_STK)
     applyBtn->setVisible(false);
@@ -492,6 +532,10 @@ void OptionsScreenVideo::updateGfxSlider()
     // Enable the blur slider if the modern renderer is used
     getWidget<GUIEngine::SpinnerWidget>("blur_level")->
         setActive(UserConfigParams::m_dynamic_lights);
+    // Same with Render resolution slider
+    getWidget<GUIEngine::SpinnerWidget>("scale_rtts")->
+        setActive(UserConfigParams::m_dynamic_lights);
+
     updateTooltip();
 } // updateGfxSlider
 
@@ -522,6 +566,32 @@ void OptionsScreenVideo::updateBlurSlider()
 
     updateBlurTooltip();
 } // updateBlurSlider
+
+// --------------------------------------------------------------------------------------------
+
+void OptionsScreenVideo::updateScaleRTTsSlider()
+{
+    GUIEngine::SpinnerWidget* scale_rtts_level = 
+        getWidget<GUIEngine::SpinnerWidget>("scale_rtts");
+    assert( scale_rtts_level != NULL );
+
+    bool found = false;
+    for (unsigned int l = 0; l < m_scale_rtts_custom_presets.size(); l++)
+    {
+        if (m_scale_rtts_custom_presets[l].value == UserConfigParams::m_scale_rtts_factor)
+        {
+            scale_rtts_level->setValue(l);
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        //I18N: custom video settings
+        scale_rtts_level->setCustomText( _("Custom") );
+    }
+} // updateScaleRTTsSlider
 
 // --------------------------------------------------------------------------------------------
 
@@ -698,6 +768,10 @@ void OptionsScreenVideo::eventCallback(Widget* widget, const std::string& name,
         // Enable the blur spinner only if the new renderer is on
         getWidget<GUIEngine::SpinnerWidget>("blur_level")->setActive(level >= 2);
 
+        // Same with Render resolution slider
+        getWidget<GUIEngine::SpinnerWidget>("scale_rtts")->
+            setActive(UserConfigParams::m_dynamic_lights);
+
         UserConfigParams::m_animated_characters = m_presets[level].animatedCharacters;
         UserConfigParams::m_particles_effects = m_presets[level].particles;
         setImageQuality(m_presets[level].image_quality);
@@ -737,6 +811,19 @@ void OptionsScreenVideo::eventCallback(Widget* widget, const std::string& name,
 #if !defined(SERVER_ONLY) && defined(_IRR_COMPILE_WITH_SDL_DEVICE_)
         update_swap_interval(UserConfigParams::m_swap_interval);
 #endif
+    }
+    else if (name == "scale_rtts")
+    {
+        GUIEngine::SpinnerWidget* scale_rtts_level =
+            getWidget<GUIEngine::SpinnerWidget>("scale_rtts");
+        assert( scale_rtts_level != NULL );
+
+        const int level = scale_rtts_level->getValue();
+        assert(level < (int)m_scale_rtts_custom_presets.size());
+
+        UserConfigParams::m_scale_rtts_factor = m_scale_rtts_custom_presets[level].value;
+
+        updateScaleRTTsSlider();
     }
     else if (name == "rememberWinpos")
     {

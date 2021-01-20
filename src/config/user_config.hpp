@@ -676,8 +676,8 @@ namespace UserConfigParams
         &m_video_group, "Determines if popup message about too old drivers should be displayed."));
     PARAM_PREFIX FloatUserConfigParam       m_scale_rtts_factor
         PARAM_DEFAULT(FloatUserConfigParam(1.0f, "scale_rtts_factor",
-        &m_video_group, "Allows one to increase performance by setting lower RTTs "
-                        "resolution. Value should be smaller or equal to 1.0"));
+        &m_video_group, "Custom value for RTTs resolution. "
+                        "Value should be smaller or equal to 1.0"));
     PARAM_PREFIX IntUserConfigParam         m_max_texture_size
         PARAM_DEFAULT(IntUserConfigParam(512, "max_texture_size",
         &m_video_group, "Max texture size when high definition textures are "
@@ -689,7 +689,7 @@ namespace UserConfigParams
                         "high quality method with SSE"));
     PARAM_PREFIX FloatUserConfigParam         m_font_size
         PARAM_DEFAULT(  FloatUserConfigParam(3, "font_size",
-        &m_video_group,"The size of fonts. 0 is the smallest and 6 is the biggest") );
+        &m_video_group, "The size of fonts. 0 is the smallest and 6 is the biggest") );
 
     // ---- Recording
     PARAM_PREFIX GroupUserConfigParam        m_recording_group

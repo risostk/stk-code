@@ -625,6 +625,7 @@ void ShaderBasedRenderer::onLoadWorld()
     const core::recti &viewport = Camera::getCamera(0)->getViewport();
     unsigned int width = viewport.LowerRightCorner.X - viewport.UpperLeftCorner.X;
     unsigned int height = viewport.LowerRightCorner.Y - viewport.UpperLeftCorner.Y;
+
     RTT* rtts = new RTT(width, height, CVS->isDeferredEnabled() ?
                         UserConfigParams::m_scale_rtts_factor : 1.0f,
                         !CVS->isDeferredEnabled());
