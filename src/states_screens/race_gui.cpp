@@ -437,7 +437,7 @@ void RaceGUI::drawGlobalTimer()
 
     core::stringw sw;
     video::SColor time_color = video::SColor(255, 255, 255, 255);
-    int dist_from_right = 10 + m_timer_width+20;
+    int dist_from_right = 10 + m_timer_width;
 
     bool use_digit_font = true;
 
@@ -1555,10 +1555,10 @@ void RaceGUI::drawLap(const AbstractKart* kart,
         {
             d = font->getDimension(
                 (StringUtils::toWString(red_score) + L"-"
-                + StringUtils::toWString(blue_score) + L"00" // space between score and score limit (=width of two 0)
+                + StringUtils::toWString(blue_score) + L"0" // space between score and score limit (=width of one 0)
                 + StringUtils::toWString(score_limit)).c_str());
-            pos.UpperLeftCorner.X -= d.Width / 2;
             int icon_width = irr_driver->getActualScreenSize().Height/19;
+            pos.UpperLeftCorner.X = viewport.LowerRightCorner.X - (icon_width+20) - d.Width;
             core::rect<s32> indicator_pos(viewport.LowerRightCorner.X - (icon_width+10),
                                         pos.UpperLeftCorner.Y,
                                         viewport.LowerRightCorner.X - 10,
@@ -1582,7 +1582,7 @@ void RaceGUI::drawLap(const AbstractKart* kart,
         pos += core::position2di(d.Width, 0);
         if (score_limit != -1)
         {
-            text = L"00";
+            text = L"0";
             d = font->getDimension(text.c_str());
             pos += core::position2di(d.Width, 0);
             // skip the space equal to the width of two zeros, then draw the score limit
