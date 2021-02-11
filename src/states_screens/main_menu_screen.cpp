@@ -63,6 +63,7 @@
 #include "tracks/track.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
+#include "main_loop.hpp"
 
 #include <string>
 
@@ -276,12 +277,11 @@ void MainMenuScreen::startTutorial()
     RaceManager::get()->setDifficulty(RaceManager::DIFFICULTY_EASY);
     RaceManager::get()->setReverseTrack(false);
 
-    // Use keyboard 0 by default (FIXME: let player choose?)
-    InputDevice* device = input_manager->getDeviceManager()->getKeyboard(0);
+    // Use the last used device
+    InputDevice* device = input_manager->getDeviceManager()->getLatestUsedDevice();
 
-    // Create player and associate player with keyboard
-    StateManager::get()->createActivePlayer(PlayerManager::getCurrentPlayer(),
-        device);
+    // Create player and associate player with device
+    StateManager::get()->createActivePlayer(PlayerManager::getCurrentPlayer(), device);
 
     if (kart_properties_manager->getKart(UserConfigParams::m_default_kart) == NULL)
     {
@@ -291,8 +291,7 @@ void MainMenuScreen::startTutorial()
     }
     RaceManager::get()->setPlayerKart(0, UserConfigParams::m_default_kart);
 
-    // ASSIGN should make sure that only input from assigned devices
-    // is read.
+    // ASSIGN should make sure that only input from assigned devices is read
     input_manager->getDeviceManager()->setAssignMode(ASSIGN);
     input_manager->getDeviceManager()
         ->setSinglePlayer( StateManager::get()->getActivePlayer(0) );
@@ -636,5 +635,19 @@ void MainMenuScreen::onDisabledItemClicked(const std::string& item)
 
 bool MainMenuScreen::onEscapePressed()
 {
-    return true;
+    class ConfirmClose :
+          public MessageDialog::IConfirmDialogListener
+    {
+    public:
+        virtual void onConfirm()
+        {
+            GUIEngine::ModalDialog::dismiss();
+            main_loop->abort();
+        }   // onConfirm
+    };   // ConfirmClose
+
+    new MessageDialog(_("Are you sure to quit STK?"),
+        MessageDialog::MESSAGE_DIALOG_YESNO, new ConfirmClose(),
+        true/*delete_listener*/);
+    return false;
 }   // onEscapePressed
