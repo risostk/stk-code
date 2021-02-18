@@ -46,6 +46,7 @@
 #include "states_screens/cutscene_general.hpp"
 #include "states_screens/grand_prix_editor_screen.hpp"
 #include "states_screens/help_screen_1.hpp"
+#include "states_screens/high_score_selection.hpp"
 #include "states_screens/offline_kart_selection.hpp"
 #include "states_screens/online/online_profile_achievements.hpp"
 #include "states_screens/online/online_profile_servers.hpp"
@@ -594,6 +595,10 @@ void MainMenuScreen::eventCallback(Widget* widget, const std::string& name,
     {
         OnlineProfileAchievements::getInstance()->push();
     }
+    else if (selection == "highscores")
+    {
+        HighScoreSelection::getInstance()->push();
+    }
 #endif
 }   // eventCallback
 
@@ -646,7 +651,7 @@ bool MainMenuScreen::onEscapePressed()
         }   // onConfirm
     };   // ConfirmClose
 
-    new MessageDialog(_("Are you sure to quit STK?"),
+    new MessageDialog(_("Are you sure you want to quit STK?"),
         MessageDialog::MESSAGE_DIALOG_YESNO, new ConfirmClose(),
         true/*delete_listener*/);
     return false;
