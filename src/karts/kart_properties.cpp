@@ -86,7 +86,7 @@ KartProperties::KartProperties(const std::string &filename)
     // if everything is defined properly.
     m_wheel_base = m_friction_slip = m_collision_terrain_impulse =
         m_collision_impulse = m_collision_impulse_time =
-        m_max_lean = m_lean_speed = m_physical_wheel_position = UNDEFINED;
+        m_physical_wheel_position = UNDEFINED;
 
     m_terrain_impulse_type       = IMPULSE_NONE;
     m_gravity_center_shift       = Vec3(UNDEFINED);
@@ -328,13 +328,7 @@ void KartProperties::load(const std::string &filename, const std::string &node)
         m_gravity_center_shift.setZ(0);
     }
 
-    // The longer the kart,the bigger its turn radius if using an identical
-    // wheel base, exactly proportionally to its length.
-    // The wheel base is used to compensate this
-    // We divide by 1.425 to have a default turn radius which conforms
-    // closely (+-0,1%) with the specifications in kart_characteristics.xml
-    m_wheel_base = fabsf(m_kart_model->getLength()/1.425f);
-
+    setWheelBase(m_kart_model->getLength());
     m_shadow_material = material_manager->getMaterialSPM(m_shadow_file, "",
         "alphablend");
 
@@ -473,9 +467,36 @@ void KartProperties::getAllData(const XMLNode * root)
     //TODO: listed as an attribute in the xml file after wheel-radius
     //TODO: same goes for their rear equivalents
 
-
+    bool fallback_skid_sound = true;
     if(const XMLNode *sounds_node= root->getNode("sounds"))
     {
+        std::string custom_skid_sound;
+        // Newly exported kart: custom skid sound
+        if (const XMLNode* skid_node = sounds_node->getNode("skid"))
+        {
+            skid_node->get("name", &custom_skid_sound);
+            std::string full_path = m_root + custom_skid_sound;
+            if (file_manager->fileExists(full_path) &&
+                StringUtils::getExtension(custom_skid_sound) == "ogg")
+            {
+                m_skid_sound = m_ident + "_skid";
+                // Default values for skid sound option if not found
+                float rolloff = 0.5;
+                float max_dist = 300.0f;
+                float gain = 1.0;
+                skid_node->get("rolloff", &rolloff);
+                skid_node->get("max_dist", &max_dist);
+                skid_node->get("volume", &gain);
+                SFXManager::get()->addSingleSfx(m_skid_sound, full_path,
+                    true/*positional*/, rolloff, max_dist, gain);
+            }
+            else if (custom_skid_sound == "default")
+            {
+                // Default skid sound
+                m_skid_sound = "skid";
+            }
+            fallback_skid_sound = false;
+        }
         std::string s;
         sounds_node->get("engine", &s);
         if (s == "custom")
@@ -547,6 +568,13 @@ void KartProperties::getAllData(const XMLNode * root)
 
     if(m_kart_model)
         m_kart_model->loadInfo(*root);
+    // For fallback skid sound found in old exported kart, give skid sound for
+    // karts having wheel
+    if (fallback_skid_sound)
+    {
+        if (m_kart_model && m_kart_model->hasWheel())
+            m_skid_sound = "skid";
+    }
 }   // getAllData
 
 // ----------------------------------------------------------------------------

@@ -62,6 +62,23 @@
 #include "utils/stk_process.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
+#include "io/rich_presence.hpp"
+
+#ifdef __SWITCH__
+extern "C" {
+  #define u64 uint64_t
+  #define u32 uint32_t
+  #define s64 int64_t
+  #define s32 int32_t
+  #define Event libnx_Event
+  #include <switch/services/applet.h>
+  #undef Event
+  #undef u64
+  #undef u32
+  #undef s64
+  #undef s32
+}
+#endif
 
 //=============================================================================================
 RaceManager* g_race_manager[PT_COUNT];
@@ -507,6 +524,10 @@ void RaceManager::startNew(bool from_overworld)
  */
 void RaceManager::startNextRace()
 {
+#ifdef __SWITCH__
+    // Throttles GPU while boosting CPU
+    appletSetCpuBoostMode(ApmCpuBoostMode_FastLoad);
+#endif
     ProcessType type = STKProcess::getType();
     main_loop->renderGUI(0);
     // Uncomment to debug audio leaks
@@ -515,11 +536,11 @@ void RaceManager::startNextRace()
     if (type == PT_MAIN)
     {
         IrrlichtDevice* device = irr_driver->getDevice();
+        device->getVideoDriver()->beginScene(true, true,
+                                            video::SColor(255,100,101,140));
         GUIEngine::clearLoadingTips();
         GUIEngine::renderLoading(true/*clearIcons*/, false/*launching*/, false/*update_tips*/);
         device->getVideoDriver()->endScene();
-        device->getVideoDriver()->beginScene(true, true,
-                                            video::SColor(255,100,101,140));
     }
 
     m_num_finished_karts   = 0;
@@ -665,6 +686,11 @@ void RaceManager::startNextRace()
         m_kart_status[i].m_last_time  = 0;
     }
     main_loop->renderGUI(8200);
+#ifdef __SWITCH__
+    appletSetCpuBoostMode(ApmCpuBoostMode_Normal);
+#endif
+
+    RichPresenceNS::RichPresence::get()->update(true);
 }   // startNextRace
 
 //---------------------------------------------------------------------------------------------
@@ -761,6 +787,11 @@ namespace computeGPRanksData
         float m_race_time;
         bool operator<(const SortData &a)
         {
+            if (RaceManager::get()->getMinorMode()==RaceManager::MINOR_MODE_FOLLOW_LEADER)
+            {
+                return ( (m_score > a.m_score) ||
+                (m_score == a.m_score && m_race_time > a.m_race_time) );
+            }
             return ( (m_score > a.m_score) ||
                 (m_score == a.m_score && m_race_time < a.m_race_time) );
         }
@@ -947,6 +978,8 @@ void RaceManager::exitRace(bool delete_world)
 
     m_saved_gp = NULL;
     m_track_number = 0;
+
+    RichPresenceNS::RichPresence::get()->update(true);
 }   // exitRace
 
 //---------------------------------------------------------------------------------------------
@@ -1200,7 +1233,7 @@ const core::stringw RaceManager::getNameOf(const MinorRaceModeType mode)
         case MINOR_MODE_EASTER_EGG:     return _("Egg Hunt");
         //I18N: Game mode
         case MINOR_MODE_SOCCER:         return _("Soccer");
-        default: assert(false); return L"";
+        default: return L"";
     }
 }   // getNameOf
 

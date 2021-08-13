@@ -21,6 +21,7 @@
 #include "audio/music_manager.hpp"
 #include "audio/sfx_manager.hpp"
 #include "audio/sfx_base.hpp"
+#include "challenges/challenge_status.hpp"
 #include "challenges/story_mode_timer.hpp"
 #include "challenges/unlock_manager.hpp"
 #include "config/player_manager.hpp"
@@ -53,6 +54,7 @@
 #include "network/stk_host.hpp"
 #include "network/protocols/client_lobby.hpp"
 #include "race/highscores.hpp"
+#include "race/highscore_manager.hpp"
 #include "replay/replay_play.hpp"
 #include "replay/replay_recorder.hpp"
 #include "scriptengine/property_animator.hpp"
@@ -189,7 +191,8 @@ void RaceResultGUI::init()
     }
 
 #ifndef SERVER_ONLY
-    if (!human_win && !NetworkConfig::get()->isNetworking())
+    if (!human_win && !NetworkConfig::get()->isNetworking() &&
+        !TipsManager::get()->isEmpty())
     {
         std::string tipset = "race";
         if (RaceManager::get()->isSoccerMode())
@@ -199,6 +202,20 @@ void RaceResultGUI::init()
         MessageQueue::add(MessageQueue::MT_GENERIC, tips_string);
     }
 #endif
+    
+    if (RaceManager::get()->getMajorMode() == RaceManager::MAJOR_MODE_GRAND_PRIX &&
+        !NetworkConfig::get()->isNetworking())
+    {
+        if (RaceManager::get()->getNumOfTracks() == RaceManager::get()->getTrackNumber() + 1
+           && !RaceManager::get()->getGrandPrix().isRandomGP())
+        {
+            Highscores* highscores = World::getWorld()->getGPHighscores();
+            const AbstractKart* k = RaceManager::get()->getKartWithGPRank(RaceManager::get()->getLocalPlayerGPRank(PLAYER_ID_GAME_MASTER));
+            float full_time = RaceManager::get()->getOverallTime(RaceManager::get()->getLocalPlayerGPRank(PLAYER_ID_GAME_MASTER));
+            std::string gp_name = RaceManager::get()->getGrandPrix().getId();
+            highscores->addGPData(k->getIdent(), k->getController()->getName(), gp_name, full_time);
+        }
+    }
 }   // init
 
 //-----------------------------------------------------------------------------
@@ -738,6 +755,12 @@ void RaceResultGUI::displayCTFResults()
     }
 #endif
 }
+//-----------------------------------------------------------------------------
+void RaceResultGUI::unload()
+{
+    cleanupGPProgress();
+    Screen::unload();
+}
 
 //-----------------------------------------------------------------------------
     void RaceResultGUI::onConfirm()
@@ -820,9 +843,15 @@ void RaceResultGUI::displayCTFResults()
             video::ITexture *icon =
                 kart->getKartProperties()->getIconMaterial()->getTexture();
             ri->m_kart_icon = icon;
+            ri->m_kart_color = RaceManager::get()->getKartColor(kart->getWorldKartId());
 
             // FTL karts will get a time assigned, they are not shown as eliminated
-            if (kart->isEliminated() && !(RaceManager::get()->isFollowMode()))
+            if (kart->isEliminated() && RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_3_STRIKES)
+            {
+                ri->m_finish_time_string = core::stringw(_("Eliminated after %s",
+                    StringUtils::toWString(StringUtils::timeToString(kart->getFinishTime(), time_precision))));
+            }
+            else if (kart->isEliminated() && !(RaceManager::get()->isFollowMode()))
             {
                 ri->m_finish_time_string = core::stringw(_("Eliminated"));
             }
@@ -1248,6 +1277,7 @@ void RaceResultGUI::displayCTFResults()
                     ri->m_kart_name += flag;
                 }
             }
+            ri->m_kart_color = RaceManager::get()->getKartColor(kart_id);
             // In FTL karts do have a time, which is shown even when the kart
             // is eliminated
             if (kart->isEliminated() && !(RaceManager::get()->isFollowMode()))
@@ -1311,7 +1341,29 @@ void RaceResultGUI::displayCTFResults()
             : video::SColor(255, 255, 255, 255);
 
         unsigned int current_x = x;
+        if (RaceManager::get()->getNumberOfKarts() >= 10)
+        {
+            int pos_rank_width = m_font->getDimension(core::stringw(n + 1).c_str()).Width;
+            core::recti pos_rank(current_x, y, pos_rank_width, m_distance_between_rows);
+            m_font->draw(core::stringw(n + 1), pos_rank, color);
+            current_x += 48;
+        }
 
+        // Draw kart color circle if kart has custom color
+        if (ri->m_kart_color > 0.0)
+        {
+            const video::SColorHSL kart_colorHSL(ri->m_kart_color * 360.0, 80.0, 50.0);
+            video::SColorf kart_colorf;
+            kart_colorHSL.toRGB(kart_colorf);
+            const video::SColor kart_color = kart_colorf.toSColor();
+            const video::SColor colors[4] = {kart_color, kart_color, kart_color, kart_color};
+            const core::recti source_rect(core::vector2di(0, 0), m_icons_frame->getSize());
+            // make frame bigger than icon to make color visible for all cases
+            const int extra_width = std::max((unsigned int)5, m_width_icon / 8);
+            core::recti dest_rect(current_x - extra_width, y - extra_width,
+                current_x + m_width_icon + extra_width, y + m_width_icon + extra_width);
+            draw2DImage(m_icons_frame, dest_rect, source_rect, NULL, colors, true);
+        }
         // First draw the icon
         // -------------------
         if (ri->m_kart_icon)
@@ -1878,6 +1930,92 @@ void RaceResultGUI::displayCTFResults()
                 }
             }   // if mode has laps
         }   // if not soccer mode
+
+        // Display challenge result and goals
+        if(RaceManager::get()->raceWasStartedFromOverworld() &&
+            (RaceManager::get()->getMajorMode() != RaceManager::MAJOR_MODE_GRAND_PRIX ||
+            RaceManager::get()->getTrackNumber() + 1 == RaceManager::get()->getNumOfTracks()))
+        {
+            current_y += int(m_distance_between_meta_rows * 0.4f);
+
+            const ChallengeStatus* c_stat = PlayerManager::getCurrentPlayer()->getCurrentChallengeStatus();
+            const ChallengeData* c_data = c_stat->getData();
+            RaceManager::Difficulty difficulty = RaceManager::get()->getDifficulty();
+            video::SColor win_color = video::SColor(255, 0, 255, 0);
+            video::SColor lose_color = video::SColor(255, 255, 0, 0);
+            video::SColor special_color = video::SColor(255, 0, 255, 255);
+            AbstractKart* kart = World::getWorld()->getPlayerKart(0);
+            bool lose_all = false;
+
+            if (kart->isEliminated())
+                lose_all = true;
+            bool position_passed = (kart->getPosition() <= c_data->getMaxPosition(difficulty) && lose_all == false)
+                                || c_data->getMaxPosition(difficulty) == -1;
+            bool time_passed = (kart->getFinishTime() <= c_data->getTimeRequirement(difficulty) && lose_all == false)
+                                || c_data->getTimeRequirement(difficulty) <= 0.0f;
+            bool energy_passed = (kart->getEnergy() >= c_data->getEnergy(difficulty) && lose_all == false)
+                                || c_data->getEnergy(difficulty) <= 0;
+            bool all_passed = position_passed && time_passed && energy_passed;
+
+            core::stringw text_string = all_passed ? _("You completed the challenge!") : _("You failed the challenge!");
+            video::SColor text_color = all_passed ? win_color : lose_color;
+            current_y += int(m_distance_between_meta_rows * 0.8f);
+            GUIEngine::getFont()->draw(text_string, core::recti(x, current_y, UserConfigParams::m_width * 0.96f,
+                                       y + GUIEngine::getFontHeight()), text_color, false, false, nullptr, true);
+
+            current_y += int(m_distance_between_meta_rows * 0.2f);
+
+            // Display goals
+            if (c_data->getMaxPosition(difficulty) != -1)
+            {
+                int r = c_data->getMaxPosition(difficulty);
+                if (c_data->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER)
+                    r --;
+
+                text_string = _("Required Rank: %i", r);
+                text_color = position_passed ? win_color : lose_color;
+                current_y += int(m_distance_between_meta_rows * 0.7f);
+                GUIEngine::getFont()->draw(text_string, core::recti(x, current_y, UserConfigParams::m_width * 0.96f,
+                                       y + GUIEngine::getSmallFontHeight()), text_color, false, false, nullptr, true);
+            }
+            if (c_data->getTimeRequirement(difficulty) > 0)
+            {
+                text_string = _("Required Time: %i",
+                    StringUtils::timeToString(c_data->getTimeRequirement(difficulty)).c_str());
+                text_color = time_passed ? win_color : lose_color;
+                current_y += int(m_distance_between_meta_rows * 0.7f);
+                GUIEngine::getFont()->draw(text_string, core::recti(x, current_y, UserConfigParams::m_width * 0.96f,
+                                       y + GUIEngine::getSmallFontHeight()), text_color, false, false, nullptr, true);
+            }
+            if (c_data->getEnergy(difficulty) > 0)
+            {
+                int energy = c_data->getEnergy(difficulty);
+
+                text_string = _("Required Nitro Points: %i", energy);
+                text_color = energy_passed ? win_color : lose_color;
+                current_y += int(m_distance_between_meta_rows * 0.7f);
+                GUIEngine::getFont()->draw(text_string, core::recti(x, current_y, UserConfigParams::m_width * 0.96f,
+                                       y + GUIEngine::getSmallFontHeight()), text_color, false, false, nullptr, true);
+            }
+
+            position_passed = (kart->getPosition() <= c_data->getMaxPosition(RaceManager::DIFFICULTY_BEST) && lose_all == false)
+                                || c_data->getMaxPosition(RaceManager::DIFFICULTY_BEST) == -1;
+            time_passed = (kart->getFinishTime() <= c_data->getTimeRequirement(RaceManager::DIFFICULTY_BEST) && lose_all == false)
+                                || c_data->getTimeRequirement(RaceManager::DIFFICULTY_BEST) <= 0.0f;
+            energy_passed = (kart->getEnergy() >= c_data->getEnergy(RaceManager::DIFFICULTY_BEST) && lose_all == false)
+                                || c_data->getEnergy(RaceManager::DIFFICULTY_BEST) <= 0;
+            bool best_while_slower = position_passed && time_passed && energy_passed && RaceManager::get()->getDifficulty() != RaceManager::DIFFICULTY_BEST;
+
+            if(best_while_slower)
+            {
+                text_string = _("Reached Requirements of SuperTux");
+                text_color = special_color;
+                current_y += int(m_distance_between_meta_rows * 0.7f);
+                GUIEngine::getFont()->draw(text_string, core::recti(x, current_y, UserConfigParams::m_width * 0.96f,
+                                       y + GUIEngine::getSmallFontHeight()), text_color, false, false, nullptr, true);
+            }
+
+        } // if it's a challenge
 #endif
     }
 

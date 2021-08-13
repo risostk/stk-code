@@ -43,6 +43,11 @@
 //! different library versions without having to change the sources.
 //! Example: NO_IRR_COMPILE_WITH_X11_ would disable X11
 
+#if defined(NO_IRR_COMPILE_WITH_VULKAN_)
+#undef _IRR_COMPILE_WITH_VULKAN_
+#else
+#define _IRR_COMPILE_WITH_VULKAN_
+#endif
 
 //! Uncomment this line to compile with the SDL device
 //#define _IRR_COMPILE_WITH_SDL_DEVICE_
@@ -157,7 +162,11 @@ If not defined, Windows Multimedia library is used, which offers also broad supp
 
 //! Only define _IRR_COMPILE_WITH_DIRECT3D_8_ if you have an appropriate DXSDK, e.g. Summer 2004
 // #define _IRR_COMPILE_WITH_DIRECT3D_8_
+#ifdef NO_IRR_COMPILE_WITH_DIRECT3D_9_
 #undef _IRR_COMPILE_WITH_DIRECT3D_9_
+#else
+#define _IRR_COMPILE_WITH_DIRECT3D_9_
+#endif
 
 #endif
 

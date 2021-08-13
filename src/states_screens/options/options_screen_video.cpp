@@ -234,9 +234,9 @@ void OptionsScreenVideo::init()
 #ifdef IOS_STK
     //I18N: In the video options, maximum frame per second
     getWidget("vsync_label")->setText(_("Maximum FPS"));
-    vsync->addLabel("120");
-    vsync->addLabel("60");
     vsync->addLabel("30");
+    vsync->addLabel("60");
+    vsync->addLabel("120");
     vsync->setValue(UserConfigParams::m_swap_interval);
 #else
     vsync->addLabel(_("Disabled"));
@@ -359,7 +359,7 @@ void OptionsScreenVideo::init()
             }
         } // next found resolution
 
-#ifndef MOBILE_STK
+#if !defined(MOBILE_STK) && !defined(__SWITCH__)
         // Add default resolutions that were not found by irrlicht
         if (!found_1024_768)
         {
@@ -447,7 +447,7 @@ void OptionsScreenVideo::init()
     if (getWidget<SpinnerWidget>("scale_rtts")->isActivated())
         getWidget<SpinnerWidget>("scale_rtts")->setActive(!in_game);
     
-#if defined(MOBILE_STK)
+#if defined(MOBILE_STK) || defined(__SWITCH__)
     applyBtn->setVisible(false);
     full->setVisible(false);
     getWidget<LabelWidget>("fullscreenText")->setVisible(false);

@@ -36,6 +36,20 @@
 #include "utils/log.hpp"
 #include "utils/translation.hpp"
 
+#ifdef __SWITCH__
+extern "C" {
+  #define u64 uint64_t
+  #define u32 uint32_t
+  #define s64 int64_t
+  #define s32 int32_t
+  #include <switch/services/acc.h>
+  #undef u64
+  #undef u32
+  #undef s64
+  #undef s32
+}
+#endif
+
 using namespace GUIEngine;
 using namespace Online;
 using namespace irr;
@@ -53,6 +67,11 @@ RegisterScreen::RegisterScreen() : Screen("online/register.stkgui")
 // -----------------------------------------------------------------------------
 void RegisterScreen::init()
 {
+    if (m_existing_player)
+        getWidget("create_user")->setText(_("Rename"));
+    else
+        getWidget("create_user")->setText(_("Create User"));
+
     getWidget<TextBoxWidget>("username")->setText(L"");
     m_info_widget = getWidget<LabelWidget>("info");
     assert(m_info_widget);
@@ -100,6 +119,25 @@ void RegisterScreen::init()
         DWORD length = GetEnvironmentVariable(L"USERNAME", env.data(), 32767);
         if (length != 0)
             username = env.data();
+#elif defined(__SWITCH__)
+        AccountUid uid;
+        // It's possible the user is using an app that doesn't need a user selection
+        // We try the last opened user as well
+        if(R_SUCCEEDED(accountInitialize(AccountServiceType_Application)))
+        {
+            if(R_SUCCEEDED(accountGetPreselectedUser(&uid)) || R_SUCCEEDED(accountGetLastOpenedUser(&uid)))
+            {
+                AccountProfile profile;
+                if(R_SUCCEEDED(accountGetProfile(&profile, uid)))
+                {
+                    AccountProfileBase profileBase;
+                    if(R_SUCCEEDED(accountProfileGet(&profile, NULL, &profileBase)))
+                        username = profileBase.nickname;
+                    accountProfileClose(&profile);
+                }
+            }
+            accountExit();
+        }
 #else
         if (getenv("USER") != NULL)          // Linux, Macs
             username = getenv("USER");
@@ -272,15 +310,17 @@ void RegisterScreen::doRegister()
     handleLocalName(local_name);
 
     // If no online account is requested, don't register
-    if(m_account_mode!=ACCOUNT_NEW_ONLINE|| m_existing_player)
+    if(m_account_mode==ACCOUNT_EXISTING_ONLINE)
     {
-        bool online = m_account_mode == ACCOUNT_EXISTING_ONLINE;
-        core::stringw password = online ? m_password_widget->getText() : "";
-        core::stringw online_name = 
-            online ? getWidget<TextBoxWidget>("username")->getText().trim() 
-                   : "";
-        m_parent_screen->setNewAccountData(online, /*auto login*/true,
+        core::stringw password = m_password_widget->getText();
+        core::stringw online_name = getWidget<TextBoxWidget>("username")->getText().trim();
+        m_parent_screen->setNewAccountData(true, /*auto login*/true,
                                            online_name, password);
+        StateManager::get()->popMenu();
+        return;
+    }
+    else if(m_account_mode==ACCOUNT_OFFLINE)
+    {
         m_existing_player = NULL;
         StateManager::get()->popMenu();
         return;

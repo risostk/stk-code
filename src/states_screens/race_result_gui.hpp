@@ -101,6 +101,8 @@ private:
         video::ITexture *m_kart_icon;
         /** The times of all karts in the right order. */
         core::stringw    m_finish_time_string;
+        /** The kart color */
+        float            m_kart_color;
     };   // Rowinfo
 
     /** The team icons. */
@@ -211,6 +213,7 @@ public:
     virtual void init() OVERRIDE;
     virtual void tearDown() OVERRIDE;
     virtual bool onEscapePressed() OVERRIDE;
+    virtual void unload() OVERRIDE;
     virtual GUIEngine::EventPropagation
                  filterActions(PlayerAction action, int deviceID, const unsigned int value,
                                Input::InputType type, int playerId) OVERRIDE;

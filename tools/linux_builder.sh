@@ -49,10 +49,12 @@ export DIRNAME="$(dirname "$(readlink -f "$0")")"
 
 ######################## CONFIG ########################
 
-export STK_VERSION="git20200711"
+export STK_VERSION="git`date +%Y%m%d`"
 export THREADS_NUMBER=`nproc`
-export SCHROOT_32BIT_NAME="chroot-jessie32"
-export SCHROOT_64BIT_NAME="chroot-jessie64"
+export SCHROOT_32BIT_NAME="chroot-stretch32"
+export SCHROOT_64BIT_NAME="chroot-stretch64"
+export SCHROOT_ARMV7_NAME="chroot-stretch-armhf"
+export SCHROOT_ARM64_NAME="chroot-stretch-arm64"
 
 export STKCODE_DIR="$DIRNAME/.."
 export STKASSETS_DIR="$STKCODE_DIR/../supertuxkart-assets"
@@ -61,13 +63,14 @@ export STKEDITOR_DIR="$STKCODE_DIR/../supertuxkart-editor"
 
 export BLACKLIST_LIBS="ld-linux libbsd.so libc.so libdl.so libdrm libexpat \
                        libGL libgl libm.so libmvec.so libpthread libresolv \
-                       librt.so libX libxcb libxshm"
+                       librt.so libX libxcb libxshm \
+                       libEGL libgbm libwayland libffi bcm_host libvc"
 
-export BUILD_DIR_32BIT="build-linux-32bit"
-export BUILD_DIR_64BIT="build-linux-64bit"
-export DEPENDENCIES_DIR_32BIT="$STKCODE_DIR/dependencies-linux-32bit"
-export DEPENDENCIES_DIR_64BIT="$STKCODE_DIR/dependencies-linux-64bit"
+export BUILD_DIR="build-linux"
+export DEPENDENCIES_DIR="$STKCODE_DIR/dependencies-linux"
 export STK_INSTALL_DIR="$STKCODE_DIR/build-linux-install"
+
+export STATIC_GCC=1
 
 # Use it if you build STK with Debian Jessie
 export ENABLE_JESSIE_HACKS=1
@@ -96,7 +99,6 @@ write_run_game_sh()
     echo '#!/bin/sh'                                                      > "$FILE"
     echo ''                                                              >> "$FILE"
     echo 'export DIRNAME="$(dirname "$(readlink -f "$0")")"'             >> "$FILE"
-    echo 'export MACHINE_TYPE=`uname -m`'                                >> "$FILE"
     echo 'export SYSTEM_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"'              >> "$FILE"
     echo ''                                                              >> "$FILE"
     echo 'export SUPERTUXKART_DATADIR="$DIRNAME"'                        >> "$FILE"
@@ -104,15 +106,9 @@ write_run_game_sh()
     echo ''                                                              >> "$FILE"
     echo 'cd "$DIRNAME"'                                                 >> "$FILE"
     echo ''                                                              >> "$FILE"
-    echo 'if [ $MACHINE_TYPE = "x86_64" ]; then'                         >> "$FILE"
-    echo '    echo "Running 64-bit version..."'                          >> "$FILE"
-    echo '    export LD_LIBRARY_PATH="$DIRNAME/lib-64:$LD_LIBRARY_PATH"' >> "$FILE"
-    echo '    "$DIRNAME/bin-64/supertuxkart" "$@"'                       >> "$FILE"
-    echo 'else'                                                          >> "$FILE"
-    echo '    echo "Running 32-bit version..."'                          >> "$FILE"
-    echo '    export LD_LIBRARY_PATH="$DIRNAME/lib:$LD_LIBRARY_PATH"'    >> "$FILE"
-    echo '    "$DIRNAME/bin/supertuxkart" "$@"'                          >> "$FILE"
-    echo 'fi'                                                            >> "$FILE"
+    echo 'export LD_LIBRARY_PATH="$DIRNAME/lib:$LD_LIBRARY_PATH"'        >> "$FILE"
+    echo '"$DIRNAME/bin/supertuxkart" "$@"'                              >> "$FILE"
+    echo ''                                                              >> "$FILE"
 }
 
 build_stk()
@@ -133,6 +129,10 @@ build_stk()
     export CPPFLAGS="-I$INSTALL_INCLUDE_DIR"
     export LDFLAGS="-Wl,-rpath,$INSTALL_LIB_DIR -L$INSTALL_LIB_DIR"
     
+    if [ "$STATIC_GCC" -gt 0 ]; then
+        LDFLAGS="$LDFLAGS -static-libgcc -static-libstdc++"
+    fi
+    
     cd "$STKCODE_DIR"
     mkdir -p "$DEPENDENCIES_DIR"
     
@@ -143,7 +143,8 @@ build_stk()
         cp -a -f "$DEPENDENCIES_DIR/../lib/zlib/"* "$DEPENDENCIES_DIR/zlib"
     
         cd "$DEPENDENCIES_DIR/zlib"
-        cmake . -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
                 -DINSTALL_PKGCONFIG_DIR="$PKG_CONFIG_PATH" &&
         make -j$THREADS_NUMBER &&
         make install
@@ -159,8 +160,6 @@ build_stk()
         cp -a -f "$DEPENDENCIES_DIR/../lib/libpng/"* "$DEPENDENCIES_DIR/libpng"
     
         cd "$DEPENDENCIES_DIR/libpng"
-        CPPFLAGS="-I$INSTALL_INCLUDE_DIR" \
-        LDFLAGS="-L$INSTALL_LIB_DIR"          \
         ./configure --prefix="$INSTALL_DIR" &&
         make -j$THREADS_NUMBER &&
         make install
@@ -170,21 +169,27 @@ build_stk()
     
     # Freetype bootstrap
     if [ ! -f "$DEPENDENCIES_DIR/freetype_bootstrap.stamp" ]; then
-        echo "Compiling freetype"
-        mkdir -p "$DEPENDENCIES_DIR/freetype"
+        echo "Compiling freetype bootstrap"
+        mkdir -p "$DEPENDENCIES_DIR/freetype/build"
         cp -a -f "$DEPENDENCIES_DIR/../lib/freetype/"* "$DEPENDENCIES_DIR/freetype"
     
-        cd "$DEPENDENCIES_DIR/freetype"
-        ZLIB_CFLAGS="-I$INSTALL_INCLUDE_DIR" ZLIB_LIBS="-L$INSTALL_LIB_DIR -l:libz.so"\
-        LIBPNG_CFLAGS="-I$INSTALL_INCLUDE_DIR" LIBPNG_LIBS="-L$INSTALL_LIB_DIR -l:libpng.so"\
-        ./configure --prefix="$INSTALL_DIR" --with-bzip2=no --with-harfbuzz=no --with-png=yes --with-zlib=yes &&
+        cd "$DEPENDENCIES_DIR/freetype/build"
+        cmake .. -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                 -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+                 -DBUILD_SHARED_LIBS=1 \
+                 -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=1 \
+                 -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=1 \
+                 -DFT_WITH_HARFBUZZ=0 \
+                 -DFT_WITH_BZIP2=0 \
+                 -DFT_WITH_BROTLI=0 \
+                 -DFT_WITH_ZLIB=1 \
+                 -DFT_WITH_PNG=1 &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
-        # We need to rebuild freetype after harfbuzz is compiled
         touch "$DEPENDENCIES_DIR/freetype_bootstrap.stamp"
     fi
-    
+
     # Harfbuzz
     if [ ! -f "$DEPENDENCIES_DIR/harfbuzz.stamp" ]; then
         echo "Compiling harfbuzz"
@@ -192,33 +197,44 @@ build_stk()
         cp -a -f "$DEPENDENCIES_DIR/../lib/harfbuzz/"* "$DEPENDENCIES_DIR/harfbuzz"
     
         cd "$DEPENDENCIES_DIR/harfbuzz"
-        FREETYPE_CFLAGS="-I$INSTALL_INCLUDE_DIR -I$INSTALL_INCLUDE_DIR/freetype2" \
-        FREETYPE_LIBS="-L$INSTALL_LIB_DIR -l:libfreetype.so -l:libpng.so -l:libz.so"\
-        ./configure --prefix="$INSTALL_DIR" --with-glib=no --with-gobject=no --with-cairo=no \
-                    --with-fontconfig=no --with-icu=no --with-graphite2=no &&
+        ./autogen.sh
+        ./configure --prefix="$INSTALL_DIR" \
+                    --with-glib=no \
+                    --with-gobject=no \
+                    --with-cairo=no \
+                    --with-fontconfig=no \
+                    --with-icu=no \
+                    --with-graphite2=no &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
         touch "$DEPENDENCIES_DIR/harfbuzz.stamp"
     fi
-    
+
     # Freetype
     if [ ! -f "$DEPENDENCIES_DIR/freetype.stamp" ]; then
         echo "Compiling freetype"
-        mkdir -p "$DEPENDENCIES_DIR/freetype"
+        mkdir -p "$DEPENDENCIES_DIR/freetype/build"
         cp -a -f "$DEPENDENCIES_DIR/../lib/freetype/"* "$DEPENDENCIES_DIR/freetype"
-    
-        cd "$DEPENDENCIES_DIR/freetype"
-        ZLIB_CFLAGS="-I$INSTALL_INCLUDE_DIR" ZLIB_LIBS="-L$INSTALL_LIB_DIR -l:libz.so" \
-        LIBPNG_CFLAGS="-I$INSTALL_INCLUDE_DIR" LIBPNG_LIBS="-L$INSTALL_LIB_DIR -l:libpng.so" \
-        HARFBUZZ_CFLAGS="-I$INSTALL_INCLUDE_DIR/harfbuzz" HARFBUZZ_LIBS="-L$INSTALL_LIB_DIR -l:libharfbuzz.so" \
-        ./configure --prefix="$INSTALL_DIR" --with-bzip2=no --with-harfbuzz=yes --with-png=yes --with-zlib=yes &&
+
+        cd "$DEPENDENCIES_DIR/freetype/build"
+        rm -rf ./*
+        cmake .. -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                 -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+                 -DBUILD_SHARED_LIBS=1 \
+                 -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=1 \
+                 -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=1 \
+                 -DFT_WITH_HARFBUZZ=1 \
+                 -DFT_WITH_BZIP2=0 \
+                 -DFT_WITH_BROTLI=0 \
+                 -DFT_WITH_ZLIB=1 \
+                 -DFT_WITH_PNG=1 &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
         touch "$DEPENDENCIES_DIR/freetype.stamp"
     fi
-    
+
     # Openal
     if [ ! -f "$DEPENDENCIES_DIR/openal.stamp" ]; then
         echo "Compiling openal"
@@ -230,7 +246,8 @@ build_stk()
         fi
     
         cd "$DEPENDENCIES_DIR/openal"
-        cmake . -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
                 -DALSOFT_UTILS=0         \
                 -DALSOFT_EXAMPLES=0      \
                 -DALSOFT_TESTS=0         \
@@ -242,18 +259,22 @@ build_stk()
         touch "$DEPENDENCIES_DIR/openal.stamp"
     fi
     
-    # OpenSSL
-    if [ ! -f "$DEPENDENCIES_DIR/openssl.stamp" ]; then
-        echo "Compiling openssl"
-        mkdir -p "$DEPENDENCIES_DIR/openssl"
-        cp -a -f "$DEPENDENCIES_DIR/../lib/openssl/"* "$DEPENDENCIES_DIR/openssl"
+    # MbedTLS
+    if [ ! -f "$DEPENDENCIES_DIR/mbedtls.stamp" ]; then
+        echo "Compiling mbedtls"
+        mkdir -p "$DEPENDENCIES_DIR/mbedtls"
+        cp -a -f "$DEPENDENCIES_DIR/../lib/mbedtls/"* "$DEPENDENCIES_DIR/mbedtls"
     
-        cd "$DEPENDENCIES_DIR/openssl"
-        ./config --prefix="$INSTALL_DIR" &&
+        cd "$DEPENDENCIES_DIR/mbedtls"
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+                -DUSE_SHARED_MBEDTLS_LIBRARY=1 \
+                -DENABLE_TESTING=0 \
+                -DENABLE_PROGRAMS=0 &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
-        touch "$DEPENDENCIES_DIR/openssl.stamp"
+        touch "$DEPENDENCIES_DIR/mbedtls.stamp"
     fi
     
     # Curl
@@ -263,19 +284,23 @@ build_stk()
         cp -a -f "$DEPENDENCIES_DIR/../lib/curl/"* "$DEPENDENCIES_DIR/curl"
     
         cd "$DEPENDENCIES_DIR/curl"
-        CPPFLAGS="-I$INSTALL_INCLUDE_DIR" \
-        LDFLAGS="-L$INSTALL_LIB_DIR"          \
-        ./configure --prefix="$INSTALL_DIR" \
-                    --with-ssl                              \
-                    --enable-shared                        \
-                    --enable-threaded-resolver \
-                    --disable-ldap \
-                    --without-libidn \
-                    --without-libidn2 \
-                    --without-libpsl \
-                    --without-librtmp \
-                    --without-libssh2 &&
-        make -j$THREADS_NUMBER && \
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+                -DBUILD_TESTING=0 \
+                -DBUILD_CURL_EXE=0 \
+                -DCMAKE_USE_MBEDTLS=1 \
+                -DUSE_ZLIB=1 \
+                -DCMAKE_USE_OPENSSL=0 \
+                -DCMAKE_USE_LIBSSH=0 \
+                -DCMAKE_USE_LIBSSH2=0 \
+                -DCMAKE_USE_GSSAPI=0 \
+                -DUSE_NGHTTP2=0 \
+                -DUSE_QUICHE=0 \
+                -DHTTP_ONLY=1 \
+                -DCURL_CA_BUNDLE=none \
+                -DCURL_CA_PATH=none \
+                -DENABLE_THREADED_RESOLVER=1 &&
+        make -j$THREADS_NUMBER && 
         make install
         check_error
         touch "$DEPENDENCIES_DIR/curl.stamp"
@@ -289,7 +314,9 @@ build_stk()
     
         cd "$DEPENDENCIES_DIR/libjpeg"
         chmod a+x ./configure
-        cmake . -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" &&
+        ASM_NASM=yasm \
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
@@ -303,6 +330,7 @@ build_stk()
         cp -a -f "$DEPENDENCIES_DIR/../lib/libogg/"* "$DEPENDENCIES_DIR/libogg"
     
         cd "$DEPENDENCIES_DIR/libogg"
+        ./autogen.sh
         ./configure --prefix="$INSTALL_DIR" &&
         make -j$THREADS_NUMBER &&
         make install
@@ -315,11 +343,11 @@ build_stk()
         echo "Compiling libvorbis"
         mkdir -p "$DEPENDENCIES_DIR/libvorbis"
         cp -a -f "$DEPENDENCIES_DIR/../lib/libvorbis/"* "$DEPENDENCIES_DIR/libvorbis"
-    
+        
         cd "$DEPENDENCIES_DIR/libvorbis"
-        CPPFLAGS="-I$INSTALL_INCLUDE_DIR" \
-        LDFLAGS="-L$INSTALL_LIB_DIR -lm" \
-        ./configure --prefix="$INSTALL_DIR" &&
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+                -DBUILD_SHARED_LIBS=1 &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
@@ -377,6 +405,7 @@ build_stk()
         cp -a -f "$DEPENDENCIES_DIR/../lib/bluez/"* "$DEPENDENCIES_DIR/bluez"
     
         cd "$DEPENDENCIES_DIR/bluez"
+        ./bootstrap
         ./configure --prefix="$INSTALL_DIR" \
                     --enable-library \
                     --disable-debug \
@@ -399,10 +428,12 @@ build_stk()
         echo "Compiling sqlite"
         mkdir -p "$DEPENDENCIES_DIR/sqlite"
         cp -a -f "$DEPENDENCIES_DIR/../lib/sqlite/"* "$DEPENDENCIES_DIR/sqlite"
+        sed -i s/' STATIC '/' SHARED '/g "$DEPENDENCIES_DIR/sqlite/CMakeLists.txt"
     
         cd "$DEPENDENCIES_DIR/sqlite"
-        ./configure --prefix="$INSTALL_DIR" \
-                    --disable-tcl &&
+        cmake . -DCMAKE_FIND_ROOT_PATH="$INSTALL_DIR" \
+                -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+                -DINSTALL_PKGCONFIG_DIR="$PKG_CONFIG_PATH" &&
         make -j$THREADS_NUMBER &&
         make install
         check_error
@@ -432,6 +463,7 @@ build_stk()
              -DUSE_SYSTEM_ANGELSCRIPT=0 \
              -DUSE_SYSTEM_ENET=0 \
              -DUSE_SYSTEM_WIIUSE=0 \
+             -DUSE_CRYPTO_OPENSSL=0 \
              -DENABLE_WAYLAND_DEVICE=0 \
              -DCMAKE_DISABLE_FIND_PACKAGE_Fontconfig=1 \
              $STK_CMAKE_FLAGS &&
@@ -456,9 +488,9 @@ copy_libraries()
         return
     fi
     
-    export DEPENDENCIES_DIR=$1
-    export BUILD_DIR=$2
-    export LIB_INSTALL_DIR=$3
+    export DEPENDENCIES_DIR="$1"
+    export BUILD_DIR="$2"
+    export LIB_INSTALL_DIR="$3"
     
     if [ -z "$DEPENDENCIES_DIR" ] || [ -z "$BUILD_DIR" ] || [ -z "$LIB_INSTALL_DIR" ]; then
         return
@@ -496,24 +528,15 @@ test_package()
     fi
     
     PACKAGE_DIR="$1"
+    BINARY_ARCH="$2"
     
-    if [ `objdump -a "$PACKAGE_DIR/bin/supertuxkart" | grep -c "elf32-i386"` -eq 0 ]; then
-        echo "Error: bin/supertuxkart is not 32-bit"
+    if [ `objdump -a "$PACKAGE_DIR/bin/supertuxkart" | grep -c "$BINARY_ARCH"` -eq 0 ]; then
+        echo "Error: bin/supertuxkart is not $BINARY_ARCH"
         exit 1
     fi
     
-    if [ `objdump -a "$PACKAGE_DIR/bin/supertuxkart-editor" | grep -c "elf32-i386"` -eq 0 ]; then
-        echo "Error: bin/supertuxkart-editor is not 32-bit"
-        exit 1
-    fi
-
-    if [ `objdump -a "$PACKAGE_DIR/bin-64/supertuxkart" | grep -c "elf64-x86-64"` -eq 0 ]; then
-        echo "Error: bin-64/supertuxkart is not 64-bit"
-        exit 1
-    fi
-    
-    if [ `objdump -a "$PACKAGE_DIR/bin-64/supertuxkart-editor" | grep -c "elf64-x86-64"` -eq 0 ]; then
-        echo "Error: bin-64/supertuxkart-editor is not 64-bit"
+    if [ `objdump -a "$PACKAGE_DIR/bin/supertuxkart-editor" | grep -c "$BINARY_ARCH"` -eq 0 ]; then
+        echo "Error: bin/supertuxkart-editor is not $BINARY_ARCH"
         exit 1
     fi
 
@@ -527,43 +550,93 @@ test_package()
         exit 1
     fi
 
-    if [ `LD_LIBRARY_PATH="$PACKAGE_DIR/lib-64" ldd "$PACKAGE_DIR/bin-64/supertuxkart" | grep -c "not found"` -gt 0 ]; then
-        echo "Error: bin-64/supertuxkart has some missing libraries"
-        exit 1
-    fi
-    
-    if [ `ldd "$PACKAGE_DIR/bin-64/supertuxkart-editor" | grep -c "not found"` -gt 0 ]; then
-        echo "Error: bin-64/supertuxkart-editor has some missing libraries"
-        exit 1
-    fi
-    
     LD_LIBRARY_PATH="$PACKAGE_DIR/lib" "$PACKAGE_DIR/bin/supertuxkart" --version
     
     if [ $? -ne 0 ]; then
         echo "Error: Couldn't start bin/supertuxkart"
         exit 1
     fi
+}
+
+create_package()
+{
+    SCHROOT_NAME="$1"
+    ARCH="$2"
+    BINARY_ARCH="$3"
     
-    LD_LIBRARY_PATH="$PACKAGE_DIR/lib-64" "$PACKAGE_DIR/bin-64/supertuxkart" --version
+    echo "Building $ARCH version..."
     
-    if [ $? -ne 0 ]; then
-        echo "Error: Couldn't start bin-64/supertuxkart"
+    schroot -c $SCHROOT_NAME -- "$0" build_stk "$DEPENDENCIES_DIR-$ARCH" "$BUILD_DIR-$ARCH" "-DDEBUG_SYMBOLS=1"
+    
+    if [ ! -f "$STKCODE_DIR/$BUILD_DIR-$ARCH/bin/supertuxkart" ]; then
+        echo "Couldn't build $ARCH version."
         exit 1
     fi
+    
+    echo "Prepare package..."
+
+    STK_PACKAGE_DIR="$STK_INSTALL_DIR/SuperTuxKart-$STK_VERSION-linux-$ARCH"
+    
+    if [ -f "$STK_PACKAGE_DIR" ]; then
+        rm -rf "$STK_PACKAGE_DIR"
+    fi
+    
+    mkdir -p "$STK_PACKAGE_DIR"
+    mkdir -p "$STK_PACKAGE_DIR/bin"
+    mkdir -p "$STK_PACKAGE_DIR/lib"
+    
+    schroot -c $SCHROOT_NAME -- "$0" copy_libraries "$DEPENDENCIES_DIR-$ARCH" "$BUILD_DIR-$ARCH" "$STK_PACKAGE_DIR/lib"
+    
+    find "$STK_PACKAGE_DIR/lib" -type f -exec strip -s {} \;
+    
+    if [ "$STATIC_GCC" -eq 0 ]; then
+        mv "$STK_PACKAGE_DIR/lib/libgcc_s.so.1" "$STK_PACKAGE_DIR/lib/libgcc_s.so.1-orig"
+        mv "$STK_PACKAGE_DIR/lib/libstdc++.so.6" "$STK_PACKAGE_DIR/lib/libstdc++.so.6-orig"
+    fi
+    
+    write_run_game_sh "$STK_PACKAGE_DIR"
+    
+    cp "$STKCODE_DIR/$BUILD_DIR-$ARCH/bin/supertuxkart" "$STK_INSTALL_DIR/supertuxkart-$STK_VERSION-linux-$ARCH-symbols"
+    cp "$STKEDITOR_DIR/$BUILD_DIR-$ARCH/bin/supertuxkart-editor" "$STK_INSTALL_DIR/supertuxkart-editor-$STK_VERSION-linux-$ARCH-symbols"
+    
+    cp -a "$STKCODE_DIR/$BUILD_DIR-$ARCH/bin/supertuxkart" "$STK_PACKAGE_DIR/bin/"
+    cp -a "$STKEDITOR_DIR/$BUILD_DIR-$ARCH/bin/supertuxkart-editor" "$STK_PACKAGE_DIR/bin/"
+    
+    cp -a "$STKCODE_DIR/data/." "$STK_PACKAGE_DIR/data"
+    cp -a "$STKASSETS_DIR/editor" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/karts" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/library" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/models" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/music" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/sfx" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/textures" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/tracks" "$STK_PACKAGE_DIR/data/"
+    cp -a "$STKASSETS_DIR/licenses.txt" "$STK_PACKAGE_DIR/data/"
+    
+    strip --strip-debug "$STK_PACKAGE_DIR/bin/supertuxkart"
+    strip --strip-debug "$STK_PACKAGE_DIR/bin/supertuxkart-editor"
+    
+    chmod a+rwx "$STK_PACKAGE_DIR" -R
+    find "$STK_PACKAGE_DIR" -type f -exec chmod a-x {} \;
+    find "$STK_PACKAGE_DIR/bin" -type f -exec chmod a+x {} \;
+    chmod a+x "$STK_PACKAGE_DIR/run_game.sh"
+    
+    schroot -c $SCHROOT_NAME -- "$0" test_package "$STK_PACKAGE_DIR" "$BINARY_ARCH"
+    
+    # Compress package
+    
+    echo "Compress package..."
+    
+    cd "$STK_INSTALL_DIR"
+    tar cf - "SuperTuxKart-$STK_VERSION-linux-$ARCH" | xz -z -e -f - > "SuperTuxKart-$STK_VERSION-linux-$ARCH.tar.xz"
+    cd -
 }
 
 # Handle clean command
 if [ ! -z "$1" ] && [ "$1" = "clean" ]; then
-    rm -rf "$DEPENDENCIES_DIR_32BIT"
-    rm -rf "$DEPENDENCIES_DIR_64BIT"
-    rm -rf "$STKCODE_DIR/$BUILD_DIR_32BIT"
-    rm -rf "$STKCODE_DIR/$BUILD_DIR_64BIT"
-    rm -rf "$STKCODE_DIR/$BUILD_DIR_32BIT-symbols"
-    rm -rf "$STKCODE_DIR/$BUILD_DIR_64BIT-symbols"
-    rm -rf "$STKEDITOR_DIR/$BUILD_DIR_32BIT"
-    rm -rf "$STKEDITOR_DIR/$BUILD_DIR_64BIT"
-    rm -rf "$STKEDITOR_DIR/$BUILD_DIR_32BIT-symbols"
-    rm -rf "$STKEDITOR_DIR/$BUILD_DIR_64BIT-symbols"
+    rm -rf "$DEPENDENCIES_DIR-"*
+    rm -rf "$STKCODE_DIR/$BUILD_DIR-"*
+    rm -rf "$STKEDITOR_DIR/$BUILD_DIR-"*
     rm -rf "$STK_INSTALL_DIR"
     exit 0
 fi
@@ -580,107 +653,18 @@ if [ ! -z "$1 " ] && [ "$1" = "copy_libraries" ]; then
     exit 0
 fi
 
+# Handle test_package command (internal only)
+if [ ! -z "$1 " ] && [ "$1" = "test_package" ]; then
+    test_package "$2" "$3"
+    exit 0
+fi
+
+
 # Building STK
-echo "Building 32-bit version..."
 
-schroot -c $SCHROOT_32BIT_NAME -- "$0" build_stk "$DEPENDENCIES_DIR_32BIT" "$BUILD_DIR_32BIT"
-
-if [ ! -f "$STKCODE_DIR/$BUILD_DIR_32BIT/bin/supertuxkart" ]; then
-    echo "Couldn't build 32-bit version."
-    exit 1
-fi
-
-echo "Building 64-bit version..."
-
-schroot -c $SCHROOT_64BIT_NAME -- "$0" build_stk "$DEPENDENCIES_DIR_64BIT" "$BUILD_DIR_64BIT"
-
-if [ ! -f "$STKCODE_DIR/$BUILD_DIR_64BIT/bin/supertuxkart" ]; then
-    echo "Couldn't build 64-bit version."
-    exit 1
-fi
-
-echo "Building 32-bit version with symbols..."
-
-schroot -c $SCHROOT_32BIT_NAME -- "$0" build_stk "$DEPENDENCIES_DIR_32BIT" "$BUILD_DIR_32BIT-symbols" "-DDEBUG_SYMBOLS=1"
-
-if [ ! -f "$STKCODE_DIR/$BUILD_DIR_32BIT/bin/supertuxkart" ]; then
-    echo "Couldn't build 32-bit version with symbols."
-    exit 1
-fi
-
-echo "Building 64-bit version with symbols..."
-
-schroot -c $SCHROOT_64BIT_NAME -- "$0" build_stk "$DEPENDENCIES_DIR_64BIT" "$BUILD_DIR_64BIT-symbols" "-DDEBUG_SYMBOLS=1"
-
-if [ ! -f "$STKCODE_DIR/$BUILD_DIR_64BIT/bin/supertuxkart" ]; then
-    echo "Couldn't build 64-bit version with symbols."
-    exit 1
-fi
-
-# Making package
-
-echo "Prepare package..."
-
-STK_PACKAGE_DIR="$STK_INSTALL_DIR/SuperTuxKart-$STK_VERSION-linux"
-
-if [ -f "$STK_PACKAGE_DIR" ]; then
-    rm -rf "$STK_PACKAGE_DIR"
-fi
-
-mkdir -p "$STK_PACKAGE_DIR"
-mkdir -p "$STK_PACKAGE_DIR/bin"
-mkdir -p "$STK_PACKAGE_DIR/bin-64"
-mkdir -p "$STK_PACKAGE_DIR/lib"
-mkdir -p "$STK_PACKAGE_DIR/lib-64"
-
-schroot -c $SCHROOT_32BIT_NAME -- "$0" copy_libraries "$DEPENDENCIES_DIR_32BIT" "$BUILD_DIR_32BIT" "$STK_PACKAGE_DIR/lib"
-schroot -c $SCHROOT_64BIT_NAME -- "$0" copy_libraries "$DEPENDENCIES_DIR_64BIT" "$BUILD_DIR_64BIT" "$STK_PACKAGE_DIR/lib-64"
-
-find "$STK_PACKAGE_DIR/lib" -type f -exec strip -s {} \;
-find "$STK_PACKAGE_DIR/lib-64" -type f -exec strip -s {} \;
-
-mv "$STK_PACKAGE_DIR/lib/libgcc_s.so.1" "$STK_PACKAGE_DIR/lib/libgcc_s.so.1-orig"
-mv "$STK_PACKAGE_DIR/lib-64/libgcc_s.so.1" "$STK_PACKAGE_DIR/lib-64/libgcc_s.so.1-orig"
-mv "$STK_PACKAGE_DIR/lib/libstdc++.so.6" "$STK_PACKAGE_DIR/lib/libstdc++.so.6-orig"
-mv "$STK_PACKAGE_DIR/lib-64/libstdc++.so.6" "$STK_PACKAGE_DIR/lib-64/libstdc++.so.6-orig"
-
-write_run_game_sh "$STK_PACKAGE_DIR"
-
-cp "$STKCODE_DIR/$BUILD_DIR_32BIT-symbols/bin/supertuxkart" "$STK_INSTALL_DIR/supertuxkart-$STK_VERSION-linux32-symbols"
-cp "$STKCODE_DIR/$BUILD_DIR_64BIT-symbols/bin/supertuxkart" "$STK_INSTALL_DIR/supertuxkart-$STK_VERSION-linux64-symbols"
-cp "$STKEDITOR_DIR/$BUILD_DIR_32BIT-symbols/bin/supertuxkart-editor" "$STK_INSTALL_DIR/supertuxkart-editor-$STK_VERSION-linux32-symbols"
-cp "$STKEDITOR_DIR/$BUILD_DIR_64BIT-symbols/bin/supertuxkart-editor" "$STK_INSTALL_DIR/supertuxkart-editor-$STK_VERSION-linux64-symbols"
-
-cp -a "$STKCODE_DIR/$BUILD_DIR_32BIT/bin/supertuxkart" "$STK_PACKAGE_DIR/bin/"
-cp -a "$STKCODE_DIR/$BUILD_DIR_64BIT/bin/supertuxkart" "$STK_PACKAGE_DIR/bin-64/"
-cp -a "$STKEDITOR_DIR/$BUILD_DIR_32BIT/bin/supertuxkart-editor" "$STK_PACKAGE_DIR/bin/"
-cp -a "$STKEDITOR_DIR/$BUILD_DIR_64BIT/bin/supertuxkart-editor" "$STK_PACKAGE_DIR/bin-64/"
-
-cp -a "$STKCODE_DIR/data/." "$STK_PACKAGE_DIR/data"
-cp -a "$STKASSETS_DIR/editor" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/karts" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/library" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/models" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/music" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/sfx" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/textures" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/tracks" "$STK_PACKAGE_DIR/data/"
-cp -a "$STKASSETS_DIR/licenses.txt" "$STK_PACKAGE_DIR/data/"
-
-chmod a+rwx "$STK_PACKAGE_DIR" -R
-find "$STK_PACKAGE_DIR" -type f -exec chmod a-x {} \;
-find "$STK_PACKAGE_DIR/bin" -type f -exec chmod a+x {} \;
-find "$STK_PACKAGE_DIR/bin-64" -type f -exec chmod a+x {} \;
-chmod a+x "$STK_PACKAGE_DIR/run_game.sh"
-
-test_package "$STK_PACKAGE_DIR"
-
-# Compress package
-
-echo "Compress package..."
-
-cd "$STK_INSTALL_DIR"
-tar cf - "SuperTuxKart-$STK_VERSION-linux" | xz -z -e -f - > "SuperTuxKart-$STK_VERSION-linux.tar.xz"
-cd -
+create_package "$SCHROOT_32BIT_NAME" "32bit" "elf32-i386"
+create_package "$SCHROOT_64BIT_NAME" "64bit" "elf64-x86-64"
+create_package "$SCHROOT_ARMV7_NAME" "armv7" "elf32-littlearm"
+create_package "$SCHROOT_ARM64_NAME" "arm64" "elf64-littleaarch64"
 
 echo "Success."

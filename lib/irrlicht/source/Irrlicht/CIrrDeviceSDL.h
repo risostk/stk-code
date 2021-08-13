@@ -23,6 +23,7 @@
 
 namespace irr
 {
+class MoltenVK;
 
 	class CIrrDeviceSDL : public CIrrDeviceStub, video::IImagePresenter
 	{
@@ -116,25 +117,13 @@ namespace irr
 
 		const SDL_SysWMinfo& getWMInfo() const { return Info; }
 
-		virtual s32 getTopPadding()
-		{
-			return TopPadding * getNativeScaleY();
-		}
+		virtual s32 getTopPadding();
 
-		virtual s32 getBottomPadding()
-		{
-			return BottomPadding * getNativeScaleY();
-		}
+		virtual s32 getBottomPadding();
 
-		virtual s32 getLeftPadding()
-		{
-			return LeftPadding * getNativeScaleX();
-		}
+		virtual s32 getLeftPadding();
 
-		virtual s32 getRightPadding()
-		{
-			return RightPadding * getNativeScaleX();
-		}
+		virtual s32 getRightPadding();
 
 		virtual f32 getNativeScaleX() const;
 		virtual f32 getNativeScaleY() const;
@@ -303,6 +292,7 @@ namespace irr
 		f32 BottomPadding;
 		f32 LeftPadding;
 		f32 RightPadding;
+		int InitialOrientation;
 
 		bool WindowHasFocus;
 		bool WindowMinimized;
@@ -334,6 +324,9 @@ namespace irr
 		std::map<SDL_Scancode, irr::EKEY_CODE> ScanCodeMap;
 		SDL_SysWMinfo Info;
 		void tryCreateOpenGLContext(u32 flags);
+#ifdef DLOPEN_MOLTENVK
+		MoltenVK* m_moltenvk;
+#endif
 	};
 
 } // end namespace irr

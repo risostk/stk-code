@@ -141,6 +141,7 @@ public:
 
 
 private:
+    int                   m_screen_orientation;
     std::vector<VideoMode> m_modes;
 
     void                  setupViewports();
@@ -185,7 +186,7 @@ private:
     float m_ssao_radius;
     float m_ssao_k;
     float m_ssao_sigma;
-    
+    irr::ELOG_LEVEL m_logger_level;
 #ifdef DEBUG
     /** Used to visualise skeletons. */
     std::vector<irr::scene::IAnimatedMeshSceneNode*> m_debug_meshes;
@@ -217,14 +218,8 @@ public:
     void                  setAmbientLight(const video::SColorf &light,
                                           bool force_SH_computation = true);
     video::ITexture      *getTexture(FileManager::AssetType type,
-                                     const std::string &filename,
-                                     bool is_premul=false,
-                                     bool is_prediv=false,
-                                     bool complain_if_not_found=true);
-    video::ITexture      *getTexture(const std::string &filename,
-                                     bool is_premul=false,
-                                     bool is_prediv=false,
-                                     bool complain_if_not_found=true);
+                                     const std::string &filename);
+    video::ITexture      *getTexture(const std::string &filename);
     void                  grabAllTextures(const scene::IMesh *mesh);
     void                  dropAllTextures(const scene::IMesh *mesh);
     scene::IMesh         *createQuadMesh(const video::SMaterial *material=NULL,

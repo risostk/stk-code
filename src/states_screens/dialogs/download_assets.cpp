@@ -29,6 +29,8 @@
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
 
+#include <SDL_system.h>
+
 using namespace GUIEngine;
 using namespace Online;
 using namespace irr::gui;
@@ -107,6 +109,15 @@ DownloadAssets::DownloadAssets()
         "(including high quality textures and music) for better "
         "gaming experience, this will use your mobile data if you don't have "
         "a wifi connection.");
+#ifdef ANDROID
+    if (SDL_IsAndroidTV())
+    {
+        // I18N: In download assets dialog
+        msg = _("SuperTuxKart will download full assets "
+            "(including high quality textures and music) for better "
+            "gaming experience.");
+    }
+#endif
     getWidget<BubbleWidget>("description")->setText(msg);
 }   // DownloadAssets
 
@@ -155,7 +166,17 @@ GUIEngine::EventPropagation DownloadAssets::processEvent(const std::string& even
             m_progress->setValue(0);
             m_progress->setVisible(true);
 
-            actions_ribbon->setVisible(false);
+            GUIEngine::RibbonWidget* actions_ribbon =
+                    getWidget<GUIEngine::RibbonWidget>("actions");
+            actions_ribbon->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
+            actions_ribbon->select("back", PLAYER_ID_GAME_MASTER);
+            getWidget("install")->setVisible(false);
+            getWidget("uninstall")->setVisible(false);
+            GUIEngine::IconButtonWidget* icon =
+                getWidget<IconButtonWidget>("back");
+            icon->setImage(file_manager->getAsset(FileManager::GUI_ICON,
+                "remove.png"), IconButtonWidget::ICON_PATH_TYPE_ABSOLUTE);
+            icon->setLabel(_("Cancel"));
 
             startDownload();
             return GUIEngine::EVENT_BLOCK;

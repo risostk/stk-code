@@ -45,6 +45,8 @@
 #include <sstream>
 
 #include <irrString.h>
+#include <IrrCompileConfig.h>
+
 using irr::core::stringc;
 using irr::core::stringw;
 
@@ -138,7 +140,7 @@ public:
 
     irr::core::stringc toString() const;
 
-    operator std::map<T, U>&() const
+    operator std::map<T, U>&()
     {
         return m_elements;
     }
@@ -461,7 +463,8 @@ namespace UserConfigParams
             PARAM_DEFAULT(  IntUserConfigParam(0, "game_mode",
                             &m_race_setup_group,
                             "Game mode. 0=standard, 1=time trial, 2=follow "
-                            "the leader, 3=3 strikes") );
+                            "the leader, 3=3 strikes, 4=easter egg hunt, "
+                            "5=soccer, 6=ghost replay") );
     PARAM_PREFIX StringUserConfigParam m_default_kart
             PARAM_DEFAULT( StringUserConfigParam("tux", "kart",
                            "Kart to select by default (the last used kart)") );
@@ -691,6 +694,16 @@ namespace UserConfigParams
         PARAM_DEFAULT(  FloatUserConfigParam(3, "font_size",
         &m_video_group, "The size of fonts. 0 is the smallest and 6 is the biggest") );
 
+#if defined(_IRR_COMPILE_WITH_DIRECT3D_9_) && defined(_M_ARM64)
+    PARAM_PREFIX StringUserConfigParam         m_render_driver
+        PARAM_DEFAULT(  StringUserConfigParam("directx9", "render_driver",
+        &m_video_group, "Render video driver to use, at the moment gl or directx9 is supported.") );
+#else
+    PARAM_PREFIX StringUserConfigParam         m_render_driver
+        PARAM_DEFAULT(  StringUserConfigParam("gl", "render_driver",
+        &m_video_group, "Render video driver to use, at the moment gl or directx9 is supported.") );
+#endif
+
     // ---- Recording
     PARAM_PREFIX GroupUserConfigParam        m_recording_group
         PARAM_DEFAULT(GroupUserConfigParam("Recording",
@@ -727,13 +740,13 @@ namespace UserConfigParams
     /** If high scores will not be saved. For repeated testing on tracks. */
     PARAM_PREFIX bool m_no_high_scores PARAM_DEFAULT(false);
 
-    /** If gamepad debugging is enabled. */
+    /** If unit testing is enabled. */
     PARAM_PREFIX bool m_unit_testing PARAM_DEFAULT(false);
 
     /** If gamepad debugging is enabled. */
     PARAM_PREFIX bool m_gamepad_debug PARAM_DEFAULT( false );
 
-    /** If gamepad debugging is enabled. */
+    /** If keyboard debugging is enabled. */
     PARAM_PREFIX bool m_keyboard_debug PARAM_DEFAULT(false);
 
     /** Wiimote debugging. */
@@ -755,7 +768,7 @@ namespace UserConfigParams
     /** True if physics debugging should be enabled. */
     PARAM_PREFIX bool m_physics_debug PARAM_DEFAULT( false );
 
-    /** True if fps should be printed each frame. */
+    /** True if FPS should be printed each frame. */
     PARAM_PREFIX bool m_fps_debug PARAM_DEFAULT(false);
 
     /** True if arena (battle/soccer) ai profiling. */
@@ -790,6 +803,16 @@ namespace UserConfigParams
     PARAM_PREFIX bool m_profiler_enabled  PARAM_DEFAULT( false );
 
     // ---- Networking
+    PARAM_PREFIX StringToUIntUserConfigParam    m_server_bookmarks
+        PARAM_DEFAULT(StringToUIntUserConfigParam("server-bookmarks",
+        "Wan server bookmarks",
+        {{ "server-bookmarks", "server-name", "last-online" }}, {}));
+
+    PARAM_PREFIX StringToUIntUserConfigParam    m_address_history
+        PARAM_DEFAULT(StringToUIntUserConfigParam("address-history",
+        "Last 5 IP addresses that user entered",
+        {{ "server-address", "address", "last-connection" }}, {}));
+
     // These stk domains have only a record to each ipv6 stun below,
     // so we can use this to know ipv4 address of nat64 gateway (if any)
     PARAM_PREFIX StringToUIntUserConfigParam m_stun_servers_v4
@@ -904,7 +927,7 @@ namespace UserConfigParams
                            "Quality of anisotropic filtering (usual values include 2-4-8-16; 0 to disable)") );
 
     PARAM_PREFIX IntUserConfigParam         m_swap_interval
-            PARAM_DEFAULT( IntUserConfigParam(0, "swap_interval",
+            PARAM_DEFAULT( IntUserConfigParam(0, "swap-interval",
                            &m_graphics_quality,
                            "Swap interval for vsync: 0 = disabled, 1 = full") );
     PARAM_PREFIX BoolUserConfigParam         m_motionblur
@@ -1150,6 +1173,14 @@ namespace UserConfigParams
     PARAM_PREFIX StringUserConfigParam m_last_used_track_group
             PARAM_DEFAULT( StringUserConfigParam("all", "last_track_group",
                            "Last selected track group") );
+
+    PARAM_PREFIX StringUserConfigParam m_discord_client_id
+            PARAM_DEFAULT( StringUserConfigParam("817760324983324753", "discord_client_id",
+                           "Discord Client ID (Set to -1 to disable)") );
+
+    PARAM_PREFIX BoolUserConfigParam m_rich_presence_debug
+            PARAM_DEFAULT( BoolUserConfigParam(false, "rich_presence_debug",
+                           "If debug logging should be enabled for rich presence") );
 
     PARAM_PREFIX StringUserConfigParam      m_skin_file
             PARAM_DEFAULT(  StringUserConfigParam("peach", "skin_name",

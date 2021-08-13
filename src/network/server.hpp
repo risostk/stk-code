@@ -202,10 +202,14 @@ public:
     // ------------------------------------------------------------------------
     virtual void saveServer() const {}
     // ------------------------------------------------------------------------
+    void setIsPasswordProtected(bool password_protected) { m_password_protected = password_protected; }
+    // ------------------------------------------------------------------------
     bool reconnectWhenQuitLobby() const { return m_reconnect_when_quit_lobby; }
     // ------------------------------------------------------------------------
     void setReconnectWhenQuitLobby(bool val)
                                          { m_reconnect_when_quit_lobby = val; }
+    // ------------------------------------------------------------------------
+    std::string getBookmarkKey() const;
 };   // Server
 
 class UserDefinedServer : public Server

@@ -315,6 +315,7 @@ public:
     // Other functions
     // ===============
     Highscores     *getHighscores() const;
+    Highscores     *getGPHighscores() const; 
     void            schedulePause(Phase phase);
     void            scheduleUnpause();
     void            scheduleExitRace() { m_schedule_exit_race = true; }
@@ -326,6 +327,7 @@ public:
     AbstractKart*   getLocalPlayerKart(unsigned int n) const;
     virtual const btTransform &getStartTransform(int index);
     void moveKartTo(AbstractKart* kart, const btTransform &t);
+    void updateTimeTargetSound();
     // ------------------------------------------------------------------------
     /** Returns a pointer to the race gui. */
     RaceGUIBase    *getRaceGUI() const { return m_race_gui;}

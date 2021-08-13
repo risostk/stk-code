@@ -26,6 +26,7 @@
 #include "karts/controller/player_controller.hpp"
 #include "karts/kart_properties.hpp"
 #include "karts/kart_properties_manager.hpp"
+#include "karts/official_karts.hpp"
 #include "modes/capture_the_flag.hpp"
 #include "modes/linear_world.hpp"
 #include "network/crypto.hpp"
@@ -62,6 +63,41 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+
+
+// ========================================================================
+class SubmitRankingRequest : public Online::XMLRequest
+{
+public:
+    SubmitRankingRequest(uint32_t online_id, double scores,
+                         double max_scores, unsigned num_races,
+                         double raw_scores, double rating_deviation,
+                         uint64_t disconnects,
+                         const std::string& country_code)
+        : XMLRequest(Online::RequestManager::HTTP_MAX_PRIORITY)
+    {
+        addParameter("id", online_id);
+        addParameter("scores", scores);
+        addParameter("max-scores", max_scores);
+        addParameter("num-races-done", num_races);
+        addParameter("raw-scores", raw_scores);
+        addParameter("rating-deviation", rating_deviation);
+        addParameter("disconnects", disconnects);
+        addParameter("country-code", country_code);
+    }
+    virtual void afterOperation()
+    {
+        Online::XMLRequest::afterOperation();
+        const XMLNode* result = getXMLData();
+        std::string rec_success;
+        if (!(result->get("success", &rec_success) &&
+            rec_success == "yes"))
+        {
+            Log::error("ServerLobby", "Failed to submit scores.");
+        }
+    }
+};   // UpdatePlayerRankingRequest
+// ========================================================================
 
 // We use max priority for all server requests to avoid downloading of addons
 // icons blocking the poll request in all-in-one graphical client server
@@ -172,8 +208,6 @@ ServerLobby::ServerLobby() : LobbyProtocol()
 {
     m_client_server_host_id.store(0);
     m_lobby_players.store(0);
-    std::vector<int> all_k =
-        kart_properties_manager->getKartsInGroup("standard");
     std::vector<int> all_t =
         track_manager->getTracksInGroup("standard");
     std::vector<int> all_arenas =
@@ -183,16 +217,7 @@ ServerLobby::ServerLobby() : LobbyProtocol()
     all_t.insert(all_t.end(), all_arenas.begin(), all_arenas.end());
     all_t.insert(all_t.end(), all_soccers.begin(), all_soccers.end());
 
-    for (int kart : all_k)
-    {
-        const KartProperties* kp = kart_properties_manager->getKartById(kart);
-        // Some distro put kart itself, ignore it online for the rest of stk
-        // user
-        if (kp->getIdent() == "geeko")
-            continue;
-        if (!kp->isAddon())
-            m_official_kts.first.insert(kp->getIdent());
-    }
+    m_official_kts.first = OfficialKarts::getOfficialKarts();
     for (int track : all_t)
     {
         Track* t = track_manager->getTrack(track);
@@ -579,9 +604,18 @@ void ServerLobby::updateAddons()
             m_addon_kts.second.insert(t->getIdent());
     }
 
-    auto all_k = kart_properties_manager->getAllAvailableKarts();
-    if (all_k.size() >= 65536)
-        all_k.resize(65535);
+    std::vector<std::string> all_k;
+    for (unsigned i = 0; i < kart_properties_manager->getNumberOfKarts(); i++)
+    {
+        const KartProperties* kp = kart_properties_manager->getKartById(i);
+        if (kp->isAddon())
+            all_k.push_back(kp->getIdent());
+    }
+    std::set<std::string> oks = OfficialKarts::getOfficialKarts();
+    if (all_k.size() >= 65536 - (unsigned)oks.size())
+        all_k.resize(65535 - (unsigned)oks.size());
+    for (const std::string& k : oks)
+        all_k.push_back(k);
     if (ServerConfig::m_live_players)
         m_available_kts.first = m_official_kts.first;
     else
@@ -1405,7 +1439,7 @@ void ServerLobby::asynchronousUpdate()
         Log::warn("ServerLobby", "Trying auto server recovery.");
         // For auto server recovery wait 3 seconds for next try
         m_last_unsuccess_poll_time = StkTime::getMonoTimeMs() + 3000;
-        registerServer();
+        registerServer(false/*first_time*/);
     }
 
     switch (m_state.load())
@@ -1454,7 +1488,7 @@ void ServerLobby::asynchronousUpdate()
         // this thread, because there is no need for the protocol manager
         // to react to any requests before the server is registered.
         if (m_server_registering.expired() && m_server_id_online.load() == 0)
-            registerServer();
+            registerServer(true/*first_time*/);
 
         if (m_server_registering.expired())
         {
@@ -1466,11 +1500,6 @@ void ServerLobby::asynchronousUpdate()
                 if (allowJoinedPlayersWaiting())
                     m_registered_for_once_only = true;
                 m_state = WAITING_FOR_START_GAME;
-            }
-            else
-            {
-                // Exit now if failed to register to stk addons
-                m_state = ERROR_LEAVE;
             }
         }
         break;
@@ -2255,13 +2284,14 @@ void ServerLobby::update(int ticks)
  *  ProtocolManager thread). The information about this client is added
  *  to the table 'server'.
  */
-void ServerLobby::registerServer()
+void ServerLobby::registerServer(bool first_time)
 {
     // ========================================================================
     class RegisterServerRequest : public Online::XMLRequest
     {
     private:
         std::weak_ptr<ServerLobby> m_server_lobby;
+        bool m_first_time;
     protected:
         virtual void afterOperation()
         {
@@ -2297,15 +2327,18 @@ void ServerLobby::registerServer()
             }
             Log::error("ServerLobby", "%s",
                 StringUtils::wideToUtf8(getInfo()).c_str());
+            // Exit now if failed to register to stk addons for first time
+            if (m_first_time)
+                sl->m_state.store(ERROR_LEAVE);
         }
     public:
-        RegisterServerRequest(std::shared_ptr<ServerLobby> sl)
+        RegisterServerRequest(std::shared_ptr<ServerLobby> sl, bool first_time)
         : XMLRequest(Online::RequestManager::HTTP_MAX_PRIORITY),
-        m_server_lobby(sl) {}
+        m_server_lobby(sl), m_first_time(first_time) {}
     };   // RegisterServerRequest
 
     auto request = std::make_shared<RegisterServerRequest>(
-        std::dynamic_pointer_cast<ServerLobby>(shared_from_this()));
+        std::dynamic_pointer_cast<ServerLobby>(shared_from_this()), first_time);
     NetworkConfig::get()->setServerDetails(request, "create");
     const SocketAddress& addr = STKHost::get()->getPublicAddress();
     request->addParameter("address",      addr.getIP()        );
@@ -4602,40 +4635,6 @@ void ServerLobby::submitRankingsToAddons()
     if (!RaceManager::get()->modeHasLaps())
         return;
 
-    // ========================================================================
-    class SubmitRankingRequest : public Online::XMLRequest
-    {
-    public:
-        SubmitRankingRequest(uint32_t online_id, double scores,
-                             double max_scores, unsigned num_races,
-                             double raw_scores, double rating_deviation,
-                             uint64_t disconnects,
-                             const std::string& country_code)
-            : XMLRequest(Online::RequestManager::HTTP_MAX_PRIORITY)
-        {
-            addParameter("id", online_id);
-            addParameter("scores", scores);
-            addParameter("max-scores", max_scores);
-            addParameter("num-races-done", num_races);
-            addParameter("raw-scores", raw_scores);
-            addParameter("rating-deviation", rating_deviation);
-            addParameter("disconnects", disconnects);
-            addParameter("country-code", country_code);
-        }
-        virtual void afterOperation()
-        {
-            Online::XMLRequest::afterOperation();
-            const XMLNode* result = getXMLData();
-            std::string rec_success;
-            if (!(result->get("success", &rec_success) &&
-                rec_success == "yes"))
-            {
-                Log::error("ServerLobby", "Failed to submit scores.");
-            }
-        }
-    };   // UpdatePlayerRankingRequest
-    // ========================================================================
-
     for (unsigned i = 0; i < RaceManager::get()->getNumPlayers(); i++)
     {
         const uint32_t id = RaceManager::get()->getKartInfo(i).getOnlineId();
@@ -5241,6 +5240,24 @@ void ServerLobby::handlePlayerDisconnection() const
 
             World::getWorld()->eliminateKart(i,
                 false/*notify_of_elimination*/);
+            if (ServerConfig::m_ranked)
+            {
+                // Handle disconnection earlier to prevent cheating by joining
+                // another ranked server
+                // Real score will be submitted later in computeNewRankings
+                const uint32_t id =
+                    RaceManager::get()->getKartInfo(i).getOnlineId();
+                unsigned num_races = m_num_ranked_races.at(id);
+                uint64_t disconnects = m_num_ranked_disconnects.at(id) << 1;
+                auto request = std::make_shared<SubmitRankingRequest>
+                    (id, m_scores.at(id) - 200.0, m_max_scores.at(id),
+                    ++num_races, m_raw_scores.at(id) - 200.0,
+                    m_rating_deviations.at(id), ++disconnects,
+                    RaceManager::get()->getKartInfo(i).getCountryCode());
+                NetworkConfig::get()->setUserDetails(request,
+                    "submit-ranking");
+                request->queue();
+            }
             k->setPosition(
                 World::getWorld()->getCurrentNumKarts() + 1);
             k->finishedRace(World::getWorld()->getTime(), true/*from_server*/);

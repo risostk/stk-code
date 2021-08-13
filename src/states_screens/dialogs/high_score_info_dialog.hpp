@@ -21,6 +21,7 @@
 
 #include "guiengine/modaldialog.hpp"
 #include "guiengine/widgets.hpp"
+#include "race/grand_prix_data.hpp"
 #include "race/highscores.hpp"
 
 /** \brief Dialog that allows a user to manage a high score
@@ -30,12 +31,10 @@ class HighScoreInfoDialog : public GUIEngine::ModalDialog
 {
 
 private:
-
-    bool  m_self_destroy;
-
     Highscores* m_hs;
 
     GUIEngine::RibbonWidget*      m_action_widget;
+    GUIEngine::IconButtonWidget*  m_start_widget;
 
     GUIEngine::LabelWidget*       m_high_score_label;
     GUIEngine::LabelWidget*       m_track_name_label;
@@ -49,11 +48,19 @@ private:
 
     void updateHighscoreEntries();
 
+    RaceManager::MajorRaceModeType m_major_mode;
+
+    float m_curr_time;
+
+    const GrandPrixData* m_gp;
+
 public:
-    HighScoreInfoDialog(Highscores* highscore, bool is_linear);
+    HighScoreInfoDialog(Highscores* highscore, bool is_linear, RaceManager::MajorRaceModeType major_mode);
     ~HighScoreInfoDialog();
 
     GUIEngine::EventPropagation processEvent(const std::string& eventSource);
+
+    virtual void onUpdate(float dt);
 };   // class HighScoreInfoDialog
 
 #endif

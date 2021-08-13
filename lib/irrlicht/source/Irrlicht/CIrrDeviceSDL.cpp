@@ -21,6 +21,7 @@
 
 #include "guiengine/engine.hpp"
 #include "glad/gl.h"
+#include "MoltenVK.h"
 
 extern bool GLContextDebugBit;
 
@@ -33,13 +34,22 @@ namespace irr
 			io::IFileSystem* io, CIrrDeviceSDL* device);
 		IVideoDriver* createOGLES2Driver(const SIrrlichtCreationParameters& params,
 			io::IFileSystem* io, CIrrDeviceSDL* device, u32 default_fb);
-
+#ifdef _IRR_COMPILE_WITH_DIRECT3D_9_
+		IVideoDriver* createDirectX9Driver(const SIrrlichtCreationParameters& params,
+			io::IFileSystem* io, HWND window);
+#endif
+#ifdef _IRR_COMPILE_WITH_VULKAN_
+		IVideoDriver* createVulkanDriver(const SIrrlichtCreationParameters& params,
+			io::IFileSystem* io, SDL_Window* win);
+#endif
 	} // end namespace video
 
 } // end namespace irr
 
 extern "C" void init_objc(SDL_SysWMinfo* info, float* top, float* bottom, float* left, float* right);
 extern "C" int handle_app_event(void* userdata, SDL_Event* event);
+extern "C" void Android_initDisplayCutout(float* top, float* bottom, float* left, float* right, int* initial_orientation);
+extern "C" int Android_disablePadding();
 
 namespace irr
 {
@@ -54,19 +64,26 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters& param)
 	MouseX(0), MouseY(0), MouseButtonStates(0),
 	Width(param.WindowSize.Width), Height(param.WindowSize.Height),
 	TopPadding(0), BottomPadding(0), LeftPadding(0), RightPadding(0),
-	WindowHasFocus(false), WindowMinimized(false), Resizable(false),
-	AccelerometerIndex(-1), AccelerometerInstance(-1),
+	InitialOrientation(0), WindowHasFocus(false), WindowMinimized(false),
+	Resizable(false), AccelerometerIndex(-1), AccelerometerInstance(-1),
 	GyroscopeIndex(-1), GyroscopeInstance(-1)
 {
 	#ifdef _DEBUG
 	setDebugName("CIrrDeviceSDL");
 	#endif
 
+#ifdef DLOPEN_MOLTENVK
+	m_moltenvk = NULL;
+#endif
+
 	Operator = 0;
 	// Initialize SDL... Timer for sleep, video for the obvious, and
 	// noparachute prevents SDL from catching fatal errors.
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
 	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+
+	// Switch SDL disables this hint by default: https://github.com/devkitPro/SDL/pull/55#issuecomment-633775255
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
 
 #ifndef MOBILE_STK
 	// Prevent fullscreen minimizes when losing focus
@@ -100,10 +117,16 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters& param)
 		{
 			SDL_VERSION(&Info.version);
 
+			// Switch doesn't support GetWindowWMInfo
+#ifndef __SWITCH__
 			if (!SDL_GetWindowWMInfo(Window, &Info))
 				return;
+#endif
 #ifdef IOS_STK
 			init_objc(&Info, &TopPadding, &BottomPadding, &LeftPadding, &RightPadding);
+#endif
+#ifdef ANDROID
+			Android_initDisplayCutout(&TopPadding, &BottomPadding, &LeftPadding, &RightPadding, &InitialOrientation);
 #endif
 			core::stringc sdlversion = "SDL Version ";
 			sdlversion += Info.version.major;
@@ -127,7 +150,7 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters& param)
 		else
 			return;
 	}
-#ifndef ANDROID
+#if !defined(ANDROID) && !defined(__SWITCH__)
 	else if (!GUIEngine::isNoGraphics())
 	{
 		// Get highdpi native scale using renderer so it will work with any
@@ -173,9 +196,18 @@ CIrrDeviceSDL::~CIrrDeviceSDL()
 {
 	if (VideoDriver)
 	{
+		// Irrlicht calls gl function when quiting, but SDL has dropped its context, manually clear the loaded GL functions
+#ifdef _IRR_COMPILE_WITH_OPENGL_
+		irr::video::COpenGLExtensionHandler* h = dynamic_cast<irr::video::COpenGLExtensionHandler*>(VideoDriver);
+		if (h)
+			h->clearGLExtensions();
+#endif
 		VideoDriver->drop();
 		VideoDriver = NULL;
 	}
+#ifdef DLOPEN_MOLTENVK
+	delete m_moltenvk;
+#endif
 	if (Context)
 		SDL_GL_DeleteContext(Context);
 	if (Window)
@@ -307,26 +339,30 @@ bool CIrrDeviceSDL::createWindow()
 {
 	// Ignore alpha size here, this follow irr_driver.cpp:450
 	// Try 32 and, upon failure, 24 then 16 bit per pixels
-	if (CreationParams.Bits == 32)
+	if (CreationParams.DriverType == video::EDT_OPENGL ||
+		CreationParams.DriverType == video::EDT_OGLES2)
 	{
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	}
-	else if (CreationParams.Bits == 24)
-	{
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-	}
-	else
-	{
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 3);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 3);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 2);
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+		if (CreationParams.Bits == 32)
+		{
+			SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		}
+		else if (CreationParams.Bits == 24)
+		{
+			SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
+			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+		}
+		else
+		{
+			SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 3);
+			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 3);
+			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 2);
+			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+		}
 	}
 
 	u32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
@@ -336,19 +372,47 @@ bool CIrrDeviceSDL::createWindow()
 	if (CreationParams.DriverType == video::EDT_OPENGL ||
 		CreationParams.DriverType == video::EDT_OGLES2)
 		flags |= SDL_WINDOW_OPENGL;
+	else if (CreationParams.DriverType == video::EDT_VULKAN)
+	{
+#ifdef DLOPEN_MOLTENVK
+		m_moltenvk = new MoltenVK();
+		if (!m_moltenvk->loaded())
+		{
+			os::Printer::log("Current MacOSX version doesn't support Vulkan or MoltenVK failed to load", ELL_WARNING);
+			return false;
+		}
+#endif
+		flags |= SDL_WINDOW_VULKAN;
+	}
 
 #ifdef MOBILE_STK
 	flags |= SDL_WINDOW_BORDERLESS | SDL_WINDOW_MAXIMIZED;
 #endif
 
-	tryCreateOpenGLContext(flags);
-	if (!Window || !Context)
+	if (CreationParams.DriverType == video::EDT_OPENGL ||
+		CreationParams.DriverType == video::EDT_OGLES2)
 	{
-		os::Printer::log( "Could not initialize display!" );
-		return false;
+		tryCreateOpenGLContext(flags);
+		if (!Window || !Context)
+		{
+			os::Printer::log( "Could not initialize display!" );
+			return false;
+		}
+		update_swap_interval(CreationParams.SwapInterval);
 	}
-
-	update_swap_interval(CreationParams.SwapInterval);
+	else
+	{
+		Window = SDL_CreateWindow("",
+			(float)CreationParams.WindowPosition.X / g_native_scale_x,
+			(float)CreationParams.WindowPosition.Y / g_native_scale_y,
+			(float)CreationParams.WindowSize.Width / g_native_scale_x,
+			(float)CreationParams.WindowSize.Height / g_native_scale_y, flags);
+		if (!Window)
+		{
+			os::Printer::log( "Could not initialize display!" );
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -546,6 +610,33 @@ void CIrrDeviceSDL::createDriver()
 		break;
 	}
 
+	case video::EDT_VULKAN:
+	{
+		#ifdef _IRR_COMPILE_WITH_VULKAN_
+		try
+		{
+			VideoDriver = video::createVulkanDriver(CreationParams, FileSystem, Window);
+		}
+		catch (std::exception& e)
+		{
+			os::Printer::log("createVulkanDriver failed", e.what(), ELL_ERROR);
+		}
+		#else
+		os::Printer::log("No Vulkan support compiled in.", ELL_ERROR);
+		#endif
+		break;
+	}
+
+	case video::EDT_DIRECT3D9:
+	{
+		#ifdef _IRR_COMPILE_WITH_DIRECT3D_9_
+		VideoDriver = video::createDirectX9Driver(CreationParams, FileSystem, Info.info.win.window);
+		#else
+		os::Printer::log("No DirectX 9 support compiled in.", ELL_ERROR);
+		#endif
+		break;
+	}
+
 	case video::EDT_NULL:
 		VideoDriver = video::createNullDriver(FileSystem, CreationParams.WindowSize);
 		break;
@@ -604,14 +695,11 @@ bool CIrrDeviceSDL::run()
 				// Mobile STK specific
 				if (irrevent.AccelerometerEvent.X < 0.0)
 					irrevent.AccelerometerEvent.X *= -1.0;
-#ifdef IOS_STK
-				if (o == SDL_ORIENTATION_LANDSCAPE)
-					irrevent.AccelerometerEvent.Y *= -1.0;
-#else
+
 				if (o == SDL_ORIENTATION_LANDSCAPE_FLIPPED ||
 					o == SDL_ORIENTATION_PORTRAIT_FLIPPED)
 					irrevent.AccelerometerEvent.Y *= -1.0;
-#endif
+
 				postEventFromUser(irrevent);
 			}
 			else if (SDL_event.sensor.which == GyroscopeInstance)
@@ -1397,6 +1485,63 @@ f32 CIrrDeviceSDL::getNativeScaleY() const
 {
 	return g_native_scale_y;
 }
+
+
+s32 CIrrDeviceSDL::getTopPadding()
+{
+#ifdef ANDROID
+	if (Android_disablePadding() != 0)
+		return 0;
+#endif
+	return TopPadding * getNativeScaleY();
+}
+
+
+s32 CIrrDeviceSDL::getBottomPadding()
+{
+#ifdef ANDROID
+	if (Android_disablePadding() != 0)
+		return 0;
+#endif
+	return BottomPadding * getNativeScaleY();
+}
+
+
+s32 CIrrDeviceSDL::getLeftPadding()
+{
+#ifdef ANDROID
+	if (Android_disablePadding() != 0)
+		return 0;
+#if SDL_VERSION_ATLEAST(2, 0, 9)
+	if ((InitialOrientation == SDL_ORIENTATION_LANDSCAPE ||
+		InitialOrientation == SDL_ORIENTATION_LANDSCAPE_FLIPPED) &&
+		SDL_GetDisplayOrientation(0) != InitialOrientation)
+		return RightPadding;
+#endif
+	return LeftPadding;
+#else
+	return LeftPadding * getNativeScaleX();
+#endif
+}
+
+
+s32 CIrrDeviceSDL::getRightPadding()
+{
+#ifdef ANDROID
+#if SDL_VERSION_ATLEAST(2, 0, 9)
+	if (Android_disablePadding() != 0)
+		return 0;
+	if ((InitialOrientation == SDL_ORIENTATION_LANDSCAPE ||
+		InitialOrientation == SDL_ORIENTATION_LANDSCAPE_FLIPPED) &&
+		SDL_GetDisplayOrientation(0) != InitialOrientation)
+		return LeftPadding;
+#endif
+	return RightPadding;
+#else
+	return RightPadding * getNativeScaleX();
+#endif
+}
+
 
 } // end namespace irr
 

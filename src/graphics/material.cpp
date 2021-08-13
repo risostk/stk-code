@@ -31,6 +31,7 @@
 #include "graphics/central_settings.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/particle_kind_manager.hpp"
+#include "graphics/sp/sp_base.hpp"
 #include "graphics/stk_tex_manager.hpp"
 #include "io/file_manager.hpp"
 #include "io/xml_node.hpp"
@@ -195,28 +196,56 @@ Material::Material(const XMLNode *node, bool deprecated)
     if (!node->get("shader", &s))
     {
         // BACKWARS COMPATIBILITY, EVENTUALLY REMOVE
+
         bool b = false;
-        if (node->get("additive", &b))
+        node->get("additive", &b);
+        if (b)
         {
-            Log::warn("material", "'additive=' property is deprecated and removed. Please use shaders now");
+            m_shader_name = "alphablend";
         }
+
         b = false;
-        if (node->get("alpha", &b))
+        node->get("transparency", &b);
+        if (b)
         {
-            Log::warn("material", "'alpha=' property is deprecated and removed. Please use shaders now");
+            m_shader_name = "alphatest";
         }
-        b = true;
-        if (node->get("light", &b))
+
+        //node->get("lightmap", &m_lightmap);
+
+        b = false;
+        node->get("alpha", &b);
+        if (b)
         {
-            Log::warn("material", "'light=' property is deprecated and removed. Please use shaders now");
+            m_shader_name = "alphablend";
+        }
+
+        b = true;
+        node->get("light", &b);
+        if (!b)
+        {
+            m_shader_name = "unlit";
         }
         if (node->get("compositing", &s))
         {
-            Log::warn("material", "'compositing=' property is deprecated and removed. Please use shaders now");
-        }
-        if (node->get("transparency", &s))
-        {
-            Log::warn("material", "'transparency=' property is deprecated and removed. Please use shaders now");
+            if (s == "blend")
+            {
+                m_shader_name = "alphablend";
+            }
+            else if (s == "test")
+            {
+                m_shader_name = "alphatest";
+            }
+            else if (s == "additive")
+            {
+                m_shader_name = "additive";
+            }
+            else if (s == "coverage")
+            {
+                m_shader_name = "alphatest";
+            }
+            else if (s != "none")
+                Log::warn("material", "Unknown compositing mode '%s'", s.c_str());
         }
 
         s = "";
@@ -362,10 +391,28 @@ Material::Material(const XMLNode *node, bool deprecated)
 //-----------------------------------------------------------------------------
 video::ITexture* Material::getTexture(bool srgb, bool premul_alpha)
 {
-    if (!m_installed)
+    std::function<void(video::IImage*)> image_mani;
+#ifndef SERVER_ONLY
+    if (srgb)
     {
-        install(srgb, premul_alpha);
+        image_mani = [](video::IImage* img)->void
+        {
+            if (!CVS->isDeferredEnabled() || !CVS->isGLSL())
+                return;
+            uint8_t* data = (uint8_t*)img->lock();
+            for (unsigned int i = 0; i < img->getDimension().Width *
+                img->getDimension().Height; i++)
+            {
+                data[i * 4] = SP::srgb255ToLinear(data[i * 4]);
+                data[i * 4 + 1] = SP::srgb255ToLinear(data[i * 4 + 1]);
+                data[i * 4 + 2] = SP::srgb255ToLinear(data[i * 4 + 2]);
+            }
+            img->unlock();
+        };
     }
+#endif
+    if (!m_installed)
+        install(image_mani);
     return m_texture;
 }   // getTexture
 
@@ -482,7 +529,7 @@ void Material::init()
 }   // init
 
 //-----------------------------------------------------------------------------
-void Material::install(bool srgb, bool premul_alpha)
+void Material::install(std::function<void(video::IImage*)> image_mani)
 {
     // Don't load a texture that are not supposed to be loaded automatically
     if (m_installed) return;
@@ -500,9 +547,8 @@ void Material::install(bool srgb, bool premul_alpha)
     }
     else
     {
-        TexConfig tc(srgb, premul_alpha, srgb/*mesh_tex*/);
-        m_texture = STKTexManager::getInstance()
-            ->getTexture(m_sampler_path[0], &tc);
+        m_texture = STKTexManager::getInstance()->getTexture(m_sampler_path[0],
+            image_mani);
     }
 
     if (m_texture == NULL) return;
