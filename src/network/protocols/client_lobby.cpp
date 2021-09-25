@@ -712,10 +712,9 @@ void ClientLobby::handleServerInfo(Event* event)
     // Add server info
     uint8_t u_data;
     data.decodeStringW(&str);
+    str.removeChars(L"\n\r\t");
 
-    //I18N: In the networking lobby
-    total_lines += _("Server name: %s", str);
-    total_lines += L"\n";
+    NetworkingLobby::getInstance()->setHeader(str);
 
     u_data = data.getUInt8();
     const core::stringw& difficulty_name =
@@ -1683,6 +1682,17 @@ void ClientLobby::handleClientCommand(const std::string& cmd)
         }
         else
             music_manager->setMasterMusicVolume((float)vol / 10);
+    }
+    else if (argv[0] == "addonrevision" && argv.size() == 2)
+    {
+        Addon* addon = addons_manager->getAddon(Addon::createAddonId(argv[1]));
+        if (!addon)
+            return;
+        core::stringw ret = addon->getName();
+        ret += core::stringw(L": revision ") +
+            core::stringw(addon->getInstalledRevision()) +
+            L"/" + core::stringw(addon->getRevision());
+        NetworkingLobby::getInstance()->addMoreServerInfo(ret);
     }
     else if (argv[0] == "liststkaddon" || argv[0] == "ls")
     {
