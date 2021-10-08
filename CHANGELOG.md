@@ -5,7 +5,7 @@ It should be kept in mind that some versions have a less complete changelog than
 
 For similar reasons, and because some features are vastly more complex than others, attributions of main changes should not be taken as a shortcut for overall contribution.
 
-## SuperTuxKart 1.3
+## SuperTuxKart 1.3 (28. September 2021)
 ### Networking
 * Server bookmarks, by Benau
 
@@ -20,7 +20,7 @@ For similar reasons, and because some features are vastly more complex than othe
 * Switch port, by Mary
 * Gamepad force feedback support, by Mary
 * Highscore screen, by RQWorldblender
-* Grand Prix highscores, by Mrkubax
+* Grand Prix highscores, by mrkubax10
 * Updates to the bundled tinygettext library, by Benau
 * Enable custom skidding sounds for karts, by Benau
 * Greatly sped up loading of tracks with many checklines through optimization, by heuchi
@@ -30,12 +30,14 @@ For similar reasons, and because some features are vastly more complex than othe
 * Display the skin-appropriate iconset without having to restart, by Benau
 * Fix some issues with the options menu when used during a pause, by Benau
 * Add a confirmation dialog before closing the game through the "go back" key/button, by Benau
-* In the result screen, display the race position with a number with 10 karts or more, by Mrkubax
+* In the result screen, display the race position with a number with 10 karts or more, by mrkubax10
 * In the result screen, display the challenge result and the requirements met or failed, by CodingJellyFish
 * Many small menu and dialogs improvements, by RQWorldblender and others
 * Usability and functionality improvements to the debug menu, by RQWorldblender
+* Clickable URLs in text, by Benau
+
 #### In-race UI
-* Add visual and sound feedback when a timed challenge or timed game is about to end, by Mrkubax and Alayan
+* Add visual and sound feedback when a timed challenge or timed game is about to end, by mrkubax10 and Alayan
 
 ### Mobile
 * Fix a precision issue that caused artefacted shadows, by icecream95 and Benau
@@ -45,6 +47,8 @@ For similar reasons, and because some features are vastly more complex than othe
 ### Tracks and modeling
 * Alien Signal, by Samuncle
 * Ancient Colosseum Labyrinth, by Typhon306
+* Improved Las Dunas Soccer, by Benau
+* Add lap line extensions to Hacienda, Old Mine, Ravenbridge Mansion and Shifting Sands, by Benau
 * New Pepper kart, by McRavenINDo
 * Improved Adiumy, Emule, GNU and Sara karts, by McRavenINDo
 

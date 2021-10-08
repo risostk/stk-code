@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <random>
 
 #include "challenges/unlock_manager.hpp"
 #include "config/player_manager.hpp"
@@ -550,15 +551,14 @@ void RaceManager::startNextRace()
 
     m_num_finished_karts   = 0;
     m_num_finished_players = 0;
+    // In follow the leader mode do not change the first kart,
+    // since it's always the leader.
+    int offset = (m_minor_mode==MINOR_MODE_FOLLOW_LEADER) ? 1 : 0;
 
     // if subsequent race, sort kart status structure
     // ==============================================
     if (m_track_number > 0)
     {
-        // In follow the leader mode do not change the first kart,
-        // since it's always the leader.
-        int offset = (m_minor_mode==MINOR_MODE_FOLLOW_LEADER) ? 1 : 0;
-
         // Keep players at the end if needed
         int player_last_offset = 0;
         if (UserConfigParams::m_gp_player_last)
@@ -579,6 +579,23 @@ void RaceManager::startNextRace()
                          m_kart_status.end() - player_last_offset);
         }
     }   // not first race
+    else
+    {
+        const bool random_pos_available = !NetworkConfig::get()->isNetworking() &&
+            (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE
+            || RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL
+            || RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER);
+
+        if (UserConfigParams::m_random_player_pos)
+        {
+            if (random_pos_available)
+            {
+                unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+                std::shuffle(m_kart_status.begin() + offset, m_kart_status.end(),
+                    std::default_random_engine(seed));
+            }
+        }
+    }
 
     // set boosted AI status for AI karts
     int boosted_ai_count = std::min<int>((int)m_ai_kart_list.size(),
