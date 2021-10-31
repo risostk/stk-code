@@ -1863,13 +1863,7 @@ void initRest()
         exit(0);
     }
 
-    // We need a temporary skin to load the font list from skin (if any)
-    GUIEngine::Skin* tmp_skin = new GUIEngine::Skin(NULL);
-    GUIEngine::setSkin(tmp_skin);
-    font_manager = new FontManager();
-    font_manager->loadFonts();
-    delete tmp_skin;
-    GUIEngine::setSkin(NULL);
+    font_manager = new FontManager(); // Fonts are loaded in GUIEngine::init
 
     input_manager = new InputManager();
 #ifdef __SWITCH__
@@ -2410,6 +2404,22 @@ int main(int argc, char *argv[])
             }
             #endif
 
+            class DriverDialog :
+                  public MessageDialog::IConfirmDialogListener
+            {
+            public:
+                virtual void onConfirm()
+                {
+                    GUIEngine::ModalDialog::dismiss();
+                }   // onConfirm
+                // --------------------------------------------------------
+                virtual void onCancel()
+                {
+                    UserConfigParams::m_old_driver_popup = false;
+                    GUIEngine::ModalDialog::dismiss();
+                }   // onCancel
+            };   // DriverDialog
+
             if (GraphicsRestrictions::isDisabled(
                 GraphicsRestrictions::GR_DRIVER_RECENT_ENOUGH))
             {
@@ -2418,7 +2428,9 @@ int main(int argc, char *argv[])
                     MessageDialog *dialog =
                         new MessageDialog(_("Your driver version is too old. "
                                             "Please install the latest video "
-                                            "drivers."), /*from queue*/ true);
+                                            "drivers."),
+                        MessageDialog::MESSAGE_DIALOG_OK_DONTSHOWAGAIN,
+                        new DriverDialog(), /*delete_listener*/ true, /*from queue*/ true);
                     GUIEngine::DialogQueue::get()->pushDialog(dialog);
                 }
                 Log::warn("OpenGL", "Driver is too old!");
@@ -2438,7 +2450,9 @@ int main(int argc, char *argv[])
                         "check if an update is available. SuperTuxKart "
                         "recommends a driver supporting %s or better. The game "
                         "will likely still run, but in a reduced-graphics mode.",
-                        version), /*from queue*/ true);
+                        version),
+                        MessageDialog::MESSAGE_DIALOG_OK_DONTSHOWAGAIN,
+                        new DriverDialog(), /*delete_listener*/ true, /*from queue*/ true);
                     GUIEngine::DialogQueue::get()->pushDialog(dialog);
                 }
                 #endif
