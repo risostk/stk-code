@@ -75,15 +75,16 @@ private:
     int m_server_info_height, m_header_text_width;
 
     core::stringw m_start_text, m_ready_text, m_live_join_text,
-        m_configuration_text, m_spectate_text, m_install_addon_text;
+        m_configuration_text, m_spectate_text, m_install_addon_text,
+        m_header_text;
 
     float m_start_timeout;
     int64_t m_cur_starting_timer;
     unsigned m_min_start_game_players;
 
-    bool m_allow_change_team, m_has_auto_start_in_server,
+    bool m_has_auto_start_in_server,
         m_server_configurable, m_client_live_joinable,
-        m_reload_server_info;
+        m_reload_server_info, m_assigned_players;
 
     Addon* m_addon_install;
     video::ITexture* m_config_texture;
@@ -135,11 +136,7 @@ public:
 
     void finishAddingPlayers();
     void addMoreServerInfo(core::stringw info);
-    void setJoinedServer(std::shared_ptr<Server> server)
-    {
-        m_joined_server = server;
-        m_server_info.clear();
-    }
+    void setJoinedServer(std::shared_ptr<Server> server);
     void updateServerInfos();
     void updatePlayers();
     void openSplitscreenDialog(InputDevice* device);
@@ -150,7 +147,8 @@ public:
     void setStartingTimerTo(float t);
     void toggleServerConfigButton(bool val)    { m_server_configurable = val; }
     void reloadServerInfos()                   { m_reload_server_info = true; }
-    void setHeader(const core::stringw& header);
+    void setHeader(const core::stringw& header)     { m_header_text = header; }
+    void setAssignedPlayers(bool val)             { m_assigned_players = val; }
 };   // class NetworkingLobby
 
 #endif

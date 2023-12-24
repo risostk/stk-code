@@ -436,8 +436,7 @@ void OptionsScreenDevice::gotSensedInput(const Input& sensed_input)
         KeyboardConfig* keyboard = (KeyboardConfig*)m_config;
         keyboard->setBinding(binding_to_set, Input::IT_KEYBOARD,
                              sensed_input.m_button_id, Input::AD_NEUTRAL,
-                             Input::AR_HALF,
-                             sensed_input.m_character);
+                             Input::AR_HALF);
 
         // refresh display
         updateInputButtons();
@@ -495,8 +494,7 @@ void OptionsScreenDevice::gotSensedInput(const Input& sensed_input)
         KeyboardConfig* keyboard = (KeyboardConfig*)m_config;
         keyboard->setBinding(binding_to_set, Input::IT_NONE,
                              sensed_input.m_button_id, Input::AD_NEUTRAL,
-                             Input::AR_HALF,
-                             sensed_input.m_character);
+                             Input::AR_HALF);
 
         // refresh display
         updateInputButtons();
@@ -588,7 +586,7 @@ void OptionsScreenDevice::eventCallback(Widget* widget,
 
                 binding_to_set = (PlayerAction)n;
 
-                new PressAKeyDialog(0.5f, 0.4f, m_config->isKeyboard());
+                new PressAKeyDialog(0.6f, 0.6f, m_config->isKeyboard());
 
                 if (m_config->isKeyboard())
                 {

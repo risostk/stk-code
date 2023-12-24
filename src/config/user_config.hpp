@@ -414,13 +414,24 @@ namespace UserConfigParams
             PARAM_DEFAULT(  BoolUserConfigParam(true, "music_on",
             &m_audio_group,
             "Whether musics are enabled or not (true or false)") );
+    PARAM_PREFIX IntUserConfigParam         m_sfx_numerator
+            PARAM_DEFAULT(  IntUserConfigParam(10, "sfx_numerator",
+            &m_audio_group, "The value in the audio options SFX spinner") );
     PARAM_PREFIX FloatUserConfigParam       m_sfx_volume
-            PARAM_DEFAULT(  FloatUserConfigParam(0.6f, "sfx_volume",
+            PARAM_DEFAULT(  FloatUserConfigParam(0.2678f, "sfx_volume",
             &m_audio_group, "Volume for sound effects, see openal AL_GAIN "
                             "for interpretation") );
+    PARAM_PREFIX IntUserConfigParam         m_music_numerator
+            PARAM_DEFAULT(  IntUserConfigParam(10, "music_numerator",
+            &m_audio_group, "The value in the audio options music spinner") );
     PARAM_PREFIX FloatUserConfigParam       m_music_volume
-            PARAM_DEFAULT(  FloatUserConfigParam(0.5f, "music_volume",
+            PARAM_DEFAULT(  FloatUserConfigParam(0.2678f, "music_volume",
             &m_audio_group, "Music volume from 0.0 to 1.0") );
+
+    PARAM_PREFIX IntUserConfigParam          m_volume_denominator
+            PARAM_DEFAULT(  IntUserConfigParam(15, "volume_denominator",
+                            &m_audio_group,
+                            "Number of steps for volume adjustment") );
 
     // ---- Race setup
     PARAM_PREFIX GroupUserConfigParam        m_race_setup_group
@@ -611,21 +622,27 @@ namespace UserConfigParams
     PARAM_PREFIX GroupUserConfigParam        m_video_group
         PARAM_DEFAULT( GroupUserConfigParam("Video", "Video Settings") );
 
+    PARAM_PREFIX IntUserConfigParam         m_real_width
+            PARAM_DEFAULT(  IntUserConfigParam(1024, "real_width", &m_video_group,
+                                            "Screen/window real width in pixels before high dpi is applied") );
+    PARAM_PREFIX IntUserConfigParam         m_real_height
+            PARAM_DEFAULT(  IntUserConfigParam(768, "real_height", &m_video_group,
+                                           "Screen/window real height in pixels before high dpi is applied") );
     PARAM_PREFIX IntUserConfigParam         m_width
             PARAM_DEFAULT(  IntUserConfigParam(1024, "width", &m_video_group,
-                                            "Screen/window width in pixels") );
+                                            "Screen/window width in pixels, this value should not be edited") );
     PARAM_PREFIX IntUserConfigParam         m_height
             PARAM_DEFAULT(  IntUserConfigParam(768, "height", &m_video_group,
-                                           "Screen/window height in pixels") );
+                                           "Screen/window height in pixels, this value should not be edited") );
     PARAM_PREFIX BoolUserConfigParam        m_fullscreen
             PARAM_DEFAULT(  BoolUserConfigParam(false, "fullscreen",
                                                 &m_video_group) );
-    PARAM_PREFIX IntUserConfigParam         m_prev_width
-            PARAM_DEFAULT(  IntUserConfigParam(1024, "prev_width",
-                            &m_video_group, "Previous screen/window width") );
-    PARAM_PREFIX IntUserConfigParam         m_prev_height
-            PARAM_DEFAULT(  IntUserConfigParam(768, "prev_height",
-                            &m_video_group,"Previous screen/window height") );
+    PARAM_PREFIX IntUserConfigParam         m_prev_real_width
+            PARAM_DEFAULT(  IntUserConfigParam(1024, "prev_real_width",
+                            &m_video_group, "Previous real screen/window width") );
+    PARAM_PREFIX IntUserConfigParam         m_prev_real_height
+            PARAM_DEFAULT(  IntUserConfigParam(768, "prev_real_height",
+                            &m_video_group,"Previous real screen/window height") );
     PARAM_PREFIX BoolUserConfigParam        m_prev_fullscreen
             PARAM_DEFAULT(  BoolUserConfigParam(false, "prev_fullscreen",
                             &m_video_group) );
@@ -706,15 +723,29 @@ namespace UserConfigParams
         PARAM_DEFAULT(  FloatUserConfigParam(3, "font_size",
         &m_video_group, "The size of fonts. 0 is the smallest and 6 is the biggest") );
 
-#if defined(_IRR_COMPILE_WITH_DIRECT3D_9_) && defined(_M_ARM64)
+#if defined(_IRR_COMPILE_WITH_DIRECT3D_9_) && defined(_M_ARM)
     PARAM_PREFIX StringUserConfigParam         m_render_driver
         PARAM_DEFAULT(  StringUserConfigParam("directx9", "render_driver",
-        &m_video_group, "Render video driver to use, at the moment gl or directx9 is supported.") );
+        &m_video_group, "Render video driver to use, at the moment gl, vulkan or directx9 is supported.") );
 #else
     PARAM_PREFIX StringUserConfigParam         m_render_driver
         PARAM_DEFAULT(  StringUserConfigParam("gl", "render_driver",
-        &m_video_group, "Render video driver to use, at the moment gl or directx9 is supported.") );
+        &m_video_group, "Render video driver to use, at the moment gl, vulkan or directx9 is supported.") );
 #endif
+
+#if defined(MOBILE_STK)
+    PARAM_PREFIX BoolUserConfigParam        m_vulkan_fullscreen_desktop
+        PARAM_DEFAULT(BoolUserConfigParam(false, "vulkan_fullscreen_desktop",
+        &m_video_group, "Use SDL_WINDOW_FULLSCREEN_DESKTOP for vulkan device"));
+#else
+    PARAM_PREFIX BoolUserConfigParam        m_vulkan_fullscreen_desktop
+        PARAM_DEFAULT(BoolUserConfigParam(true, "vulkan_fullscreen_desktop",
+        &m_video_group, "Use SDL_WINDOW_FULLSCREEN_DESKTOP for vulkan device"));
+#endif
+
+    PARAM_PREFIX BoolUserConfigParam        m_non_ge_fullscreen_desktop
+        PARAM_DEFAULT(BoolUserConfigParam(false, "non_ge_fullscreen_desktop",
+        &m_video_group, "Use SDL_WINDOW_FULLSCREEN_DESKTOP for non-ge device"));
 
     // ---- Recording
     PARAM_PREFIX GroupUserConfigParam        m_recording_group
@@ -823,6 +854,11 @@ namespace UserConfigParams
         PARAM_DEFAULT(StringToUIntUserConfigParam("server-bookmarks",
         "Wan server bookmarks",
         {{ "server-bookmarks", "server-name", "last-online" }}, {}));
+
+    PARAM_PREFIX StringToUIntUserConfigParam    m_server_bookmarks_order
+        PARAM_DEFAULT(StringToUIntUserConfigParam("server-bookmarks-order",
+        "Wan server bookmarks order",
+        {{ "server-bookmarks", "server-name", "id" }}, {}));
 
     PARAM_PREFIX StringToUIntUserConfigParam    m_address_history
         PARAM_DEFAULT(StringToUIntUserConfigParam("address-history",
@@ -1211,9 +1247,38 @@ namespace UserConfigParams
             PARAM_DEFAULT(  StringUserConfigParam("peach", "skin_name",
                                                   "Name of the skin to use") );
 
+    // ---- settings for minimap display
+    PARAM_PREFIX GroupUserConfigParam        m_minimap_setup_group
+        PARAM_DEFAULT( GroupUserConfigParam("Minimap",
+                                            "Minimap Setup Settings") );
+
     PARAM_PREFIX IntUserConfigParam        m_minimap_display
-        PARAM_DEFAULT(IntUserConfigParam(0, "minimap_display",
-                      "Minimap: 0 bottom-left, 1 middle-right, 2 hidden, 3 center"));
+        PARAM_DEFAULT(IntUserConfigParam(0, "display",
+                     &m_minimap_setup_group, "display: 0 bottom-left, 1 middle-right, 2 hidden, 3 center"));
+
+    PARAM_PREFIX FloatUserConfigParam      m_minimap_size
+            PARAM_DEFAULT(  FloatUserConfigParam(180.0f, "size",
+            &m_minimap_setup_group, "Size of the the minimap (480 = full screen height; scaled afterwards)") );
+
+    PARAM_PREFIX FloatUserConfigParam      m_minimap_ai_icon_size
+            PARAM_DEFAULT(  FloatUserConfigParam(16.0f, "ai-icon",
+            &m_minimap_setup_group, "The size of the icons for the AI karts on the minimap.") );
+
+    PARAM_PREFIX FloatUserConfigParam      m_minimap_player_icon_size
+            PARAM_DEFAULT(  FloatUserConfigParam(20.0f, "player-icon",
+            &m_minimap_setup_group, "The size of the icons for the player kart.") );
+
+    // ---- settings for powerup display
+    PARAM_PREFIX GroupUserConfigParam      m_powerup_setup_group
+        PARAM_DEFAULT( GroupUserConfigParam("PowerUp",
+                                            "PowerUp Setup Settings") );
+
+    PARAM_PREFIX IntUserConfigParam        m_powerup_display
+        PARAM_DEFAULT(IntUserConfigParam(0, "display",
+            &m_powerup_setup_group, "display: 0 center, 1 right side, 2 hidden (see karts' held powerups)"));
+    PARAM_PREFIX FloatUserConfigParam      m_powerup_size
+            PARAM_DEFAULT(  FloatUserConfigParam(64.0f, "powerup-icon-size",
+            &m_powerup_setup_group, "Size of the powerup icon (scaled afterwards)") );
 
     // ---- Settings for spectator camera
     PARAM_PREFIX GroupUserConfigParam       m_spectator

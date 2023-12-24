@@ -25,6 +25,7 @@
 #include "font/regular_face.hpp"
 #include "graphics/camera_debug.hpp"
 #include "graphics/camera_fps.hpp"
+#include "graphics/central_settings.hpp"
 #include "graphics/shader_based_renderer.hpp"
 #include "graphics/sp/sp_base.hpp"
 #include "graphics/stk_text_billboard.hpp"
@@ -66,6 +67,7 @@
 #include "utils/profiler.hpp"
 #include "utils/string_utils.hpp"
 
+#include <IrrlichtDevice.h>
 #include <IGUIEnvironment.h>
 #include <IGUIContextMenu.h>
 
@@ -1000,7 +1002,14 @@ bool handleContextMenuAction(s32 cmd_id)
                 SP::SPTextureManager* sptm = SP::SPTextureManager::get();
                 if (t == "tus;")
                 {
-                    sptm->dumpAllTextures();
+                    if (CVS->isGLSL())
+                        sptm->dumpAllTextures();
+                    else
+                    {
+                        for (auto& p : STKTexManager::getInstance()->getAllTextures())
+                            Log::info("STKTexManager", "%s", p.first.c_str());
+                        STKTexManager::getInstance()->dumpTextureUsage();
+                    }
                     return false;
                 }
                 if (t.empty())
@@ -1056,7 +1065,7 @@ bool handleContextMenuAction(s32 cmd_id)
                             "* <End> - Last kart\n"
                             "* <Page Up> - Previous kart\n"
                             "* <Page Down> - Next kart"
-                            , true);
+                            , World::getWorld() && World::getWorld()->isNetworkWorld() ? false : true);
         break;
     }
     return false;

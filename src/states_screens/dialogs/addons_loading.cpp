@@ -39,6 +39,8 @@
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
 
+#include <ITexture.h>
+
 using namespace GUIEngine;
 using namespace Online;
 using namespace irr::gui;
@@ -109,12 +111,12 @@ void AddonsLoading::beforeAddingWidgets()
 
     if (m_addon.isInstalled())
     {
-        /* only keep the button as "update" if allowed to access the net
-         * and  not in error state
+        /* Turn "Install" button into "Update" if allowed to access the internet
+         * and not in an errored state
          */
         if (m_addon.needsUpdate() && !addons_manager->wasError()
             && UserConfigParams::m_internet_status==RequestManager::IPERM_ALLOWED)
-            getWidget<IconButtonWidget> ("install")->setLabel( _("Update") );
+            getWidget<IconButtonWidget> ("install")->setText( _("Update") );
         else
             r->removeChildNamed("install");
     }

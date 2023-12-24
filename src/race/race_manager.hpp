@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <cassert>
 #include <string>
 
 #include "network/remote_kart_info.hpp"
@@ -168,7 +169,7 @@ public:
             case MINOR_MODE_NORMAL_RACE:    return "/gui/icons/mode_normal.png";
             case MINOR_MODE_TIME_TRIAL:     return "/gui/icons/mode_tt.png";
             case MINOR_MODE_FOLLOW_LEADER:  return "/gui/icons/mode_ftl.png";
-            case MINOR_MODE_LAP_TRIAL:      return "/gui/icons/mode_normal.png"; // TODO: Add lap trial icon
+            case MINOR_MODE_LAP_TRIAL:      return "/gui/icons/mode_laptrial.png";
             case MINOR_MODE_3_STRIKES:      return "/gui/icons/mode_3strikes.png";
             case MINOR_MODE_FREE_FOR_ALL:   return "/gui/icons/mode_weapons.png";
             case MINOR_MODE_CAPTURE_THE_FLAG: return "/gui/icons/mode_weapons.png";
@@ -644,11 +645,14 @@ public:
     // ----------------------------------------------------------------------------------------
     int getKartLocalPlayerId(int k) const
     {
+        assert(k < (int)m_kart_status.size());
         return m_kart_status[k].m_local_player_id;
     }   // getKartLocalPlayerId
     // ----------------------------------------------------------------------------------------
     int getKartGlobalPlayerId(int k) const
     {
+        if (k >= (int)m_kart_status.size())
+            return -1;
         return m_kart_status[k].m_global_player_id;
     }   // getKartGlobalPlayerId
     // ----------------------------------------------------------------------------------------

@@ -19,10 +19,13 @@
 
 #include "config/user_config.hpp"
 #include "guiengine/widgets/progress_bar_widget.hpp"
+#include "karts/kart_properties.hpp"
+#include "karts/kart_properties_manager.hpp"
 #include "input/device_manager.hpp"
 #include "network/network_config.hpp"
 #include "network/network_string.hpp"
 #include "network/protocols/client_lobby.hpp"
+#include "network/server.hpp"
 #include "network/stk_host.hpp"
 #include "states_screens/state_manager.hpp"
 #include "states_screens/online/networking_lobby.hpp"
@@ -136,6 +139,24 @@ void NetworkKartSelectionScreen::allPlayersDone()
         // kart
         kart.encodeString(m_kart_widgets[n].m_kart_internal_name);
     }
+
+    NetworkConfig* nc = NetworkConfig::get();
+    if (nc->getServerCapabilities().find(
+        "real_addon_karts") != nc->getServerCapabilities().end())
+    {
+        for (unsigned n = 0; n < kart_count; n++)
+        {
+            KartData kart_data;
+            if (nc->useTuxHitboxAddon())
+            {
+                const KartProperties* kp = kart_properties_manager
+                    ->getKart(m_kart_widgets[n].m_kart_internal_name);
+                if (kp && kp->isAddon())
+                    kart_data = KartData(kp);
+            }
+            kart_data.encode(&kart);
+        }
+    }
     STKHost::get()->sendToServer(&kart, true);
 
     // ---- Switch to assign mode
@@ -173,6 +194,8 @@ bool NetworkKartSelectionScreen::onEscapePressed()
     }
     // Rewrite the previous server infos saved (game mode, chat lists...)
     NetworkingLobby::getInstance()->reloadServerInfos();
+    if (auto cl = LobbyProtocol::get<ClientLobby>())
+        NetworkingLobby::getInstance()->setHeader(cl->getJoinedServer()->getName());
     return true; // remove the screen
 }   // onEscapePressed
 

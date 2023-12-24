@@ -61,6 +61,8 @@ private:
     static std::mt19937 m_random_engine;
 
     static uint32_t m_random_seed;
+
+    static bool preloadIcon(const std::string& name);
 public:
     static void loadDefaultItemMeshes();
     static void removeTextures();
@@ -93,6 +95,14 @@ public:
     static scene::IMesh* getItemLowResolutionModel(ItemState::ItemType type)
                                       { return m_item_lowres_mesh[type]; }
     // ------------------------------------------------------------------------
+    /** Returns the mesh for a certain item. */
+    static std::string getIcon(ItemState::ItemType type)
+                                      { return m_all_icons[type]; }
+    // ------------------------------------------------------------------------
+    /** Returns the mesh for a certain item (string of the icon path). */
+    static std::string getIcon_name(ItemState::ItemType type)
+                                      { return m_icon[type]; }
+    // ------------------------------------------------------------------------
     /** Returns the glow color for an item. */
     static video::SColorf& getGlowColor(ItemState::ItemType type)
                                       { return m_glow_color[type]; }
@@ -117,6 +127,9 @@ private:
 
     /** Stores all low-resolution item models. */
     static std::vector<scene::IMesh *> m_item_lowres_mesh;
+
+    /** Stores all item models. */
+    static std::vector<std::string> m_icon;
 
 protected:
     /** Remaining time that items should remain switched. If the
@@ -206,7 +219,7 @@ public:
     unsigned int insertItem(Item *item);
     // ------------------------------------------------------------------------
     /** Returns the icon(material) for an item. */
-    Material* getIcon(int type) const {return m_all_icons [type];}
+    // Material* getIcon(int type) const {return m_all_icons [type];}
 };   // ItemManager
 
 #endif

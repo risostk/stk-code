@@ -234,6 +234,8 @@ private:
 
     std::atomic<int> m_lobby_players;
 
+    std::atomic<int> m_current_ai_count;
+
     std::atomic<uint64_t> m_last_success_poll_time;
 
     uint64_t m_last_unsuccess_poll_time, m_server_started_at, m_server_delay;
@@ -368,6 +370,7 @@ private:
     void handleKartInfo(Event* event);
     void clientInGameWantsToBackLobby(Event* event);
     void clientSelectingAssetsWantsToBackLobby(Event* event);
+    std::set<std::shared_ptr<STKPeer>> getSpectatorsByLimit();
     void kickPlayerWithReason(STKPeer* peer, const char* reason) const;
     void testBannedForIP(STKPeer* peer) const;
     void testBannedForIPv6(STKPeer* peer) const;
@@ -412,6 +415,7 @@ public:
     }
     uint32_t getServerIdOnline() const           { return m_server_id_online; }
     void setClientServerHostId(uint32_t id)   { m_client_server_host_id = id; }
+    static int m_fixed_laps;
 };   // class ServerLobby
 
 #endif // SERVER_LOBBY_HPP

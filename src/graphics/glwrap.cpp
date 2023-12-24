@@ -34,6 +34,8 @@
 #include <sstream>
 #include <ge_gl_utils.hpp>
 
+#include <IVideoDriver.h>
+
 #ifdef DEBUG
 #if !defined(__APPLE__) && !defined(ANDROID)
 #define ARB_DEBUG_OUTPUT
@@ -693,9 +695,10 @@ bool checkGLError()
 }
 
 #ifdef WIN32
-// Tell system that it should use nvidia on optimus devices
+// Tell system that it should use nvidia on optimus devices and amd on enduro devices
 extern "C" {
     __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+    __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
 }
 #endif
 

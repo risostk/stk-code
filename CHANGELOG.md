@@ -1,13 +1,46 @@
 # Changelog
 This file documents notable changes to SuperTuxKart across versions since its inception.
 
-It should be kept in mind that some versions have a less complete changelog than others, and that this changelog do not list the details of the many small bugfixes and improvements which together make a significant part of the progress between releases.
+It should be kept in mind that some versions have a less complete changelog than others, and that this changelog does not list the details of the many small bugfixes and improvements which together make a significant part of the progress between releases.
 
 For similar reasons, and because some features are vastly more complex than others, attributions of main changes should not be taken as a shortcut for overall contribution.
+
+## SuperTuxKart 1.4 (31. October 2022)
+### General
+* Lap trial mode, by mrkubax10
+* Fix parachute powerup, by heuchi
+* Fix gyroscope on walldriving surface, by Benau
+* Enable ARMv7 build for Windows, by Benau
+* Restore macOS <= 10.14 support, by Benau
+* Avoid triggering other goal lines when the goal is already scored, by kimden
+
+### Graphics
+* Items and stars animation, by Semphris
+* LOD optimization, by Benau
+* Implement HiDPI support in SDL2 properly, by Benau
+* Beta Vulkan renderer, by Benau
+* Make sky particle always fall vertically, by Benau
+
+### Tracks and modeling
+* Updated Konqi, by ZAQraven99
+* New Godette kart, by ZAQraven99
+* Updated Battle Island and Cave X, by Typhon306
+* Fix broken invisible wall in Antediluvian Abyss, by Benau
+* New textures in Shifting Sands, by KartOym
+* Balanced starting positions in all official soccer fields, by Crystal
+
+### Networking
+* Add track searching to network track screen, by Benau
+* Make limit of players in game configurable, by Waldlaubsaengernest
+* Allow using real addon karts (same hitbox and kart type as in local game), by Benau
+
+### User Interface
+* Add left side ghost replay difficulties, by ldoyenard
 
 ## SuperTuxKart 1.3 (28. September 2021)
 ### Networking
 * Server bookmarks, by Benau
+* Background download of addon packs, by Benau
 
 ### Graphics
 * Introduce render resolution scaling for the modern renderer, by QwertyChouskie and Deve. For users with limited GPU power, this allows to get significant performance (FPS) gains at the cost of image quality. It can also allow additional graphics effects at the same performance. This is especially useful for users with high-resolution and high-DPI screens. The scaling only affects the 3D scene, the UI remains crisp at full-resolution.
@@ -35,6 +68,7 @@ For similar reasons, and because some features are vastly more complex than othe
 * Many small menu and dialogs improvements, by RQWorldblender and others
 * Usability and functionality improvements to the debug menu, by RQWorldblender
 * Clickable URLs in text, by Benau
+* Add a rainbow background to the color picker, making it more intuitive, by riso
 
 #### In-race UI
 * Add visual and sound feedback when a timed challenge or timed game is about to end, by mrkubax10 and Alayan
@@ -49,8 +83,8 @@ For similar reasons, and because some features are vastly more complex than othe
 * Ancient Colosseum Labyrinth, by Typhon306
 * Improved Las Dunas Soccer, by Benau
 * Add lap line extensions to Hacienda, Old Mine, Ravenbridge Mansion and Shifting Sands, by Benau
-* New Pepper kart, by McRavenINDo
-* Improved Adiumy, Emule, GNU and Sara karts, by McRavenINDo
+* New Pepper kart, by ZAQraven99
+* Improved Adiumy, Emule, GNU and Sara karts, by ZAQraven99
 
 ## SuperTuxKart 1.2 (27. August 2020)
 
@@ -101,7 +135,7 @@ For similar reasons, and because some features are vastly more complex than othe
 
 ### Tracks and modeling
 #### Karts
-* New version of Kiki, by Typhon306 and McRavenINDo
+* New version of Kiki, by Typhon306 and ZAQraven99
 * Improved karts, by Crystal
     * Pidgin, Puffy
 * Improved beastie animation, by D_ft Kid

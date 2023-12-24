@@ -154,6 +154,7 @@ void ServerSelection::init()
     Screen::init();
 
     m_last_load_time = -5000;
+    m_sort_default = true;
     updateHeader();
 
 #ifndef ENABLE_IPV6
@@ -227,27 +228,47 @@ void ServerSelection::loadList()
         {
             std::shared_ptr<Server> c = m_sort_desc ? a : b;
             std::shared_ptr<Server> d = m_sort_desc ? b : a;
+            if (g_bookmarks_next && m_sort_default)
+                return c->getBookmarkID() > d->getBookmarkID();
             switch (m_current_column)
             {
             case 0:
+            {
                 return c->getLowerCaseName() > d->getLowerCaseName();
                 break;
+            }
             case 1:
+            {
                 return c->getServerMode() > d->getServerMode();
                 break;
+            }
             case 2:
-                return c->getCurrentPlayers() > d->getCurrentPlayers();
+            {
+                int c_players = c->getCurrentPlayers() - c->getCurrentAI();
+                if (c_players < 0)
+                    c_players = 0;
+                int d_players = d->getCurrentPlayers() - d->getCurrentAI();
+                if (d_players < 0)
+                    d_players = 0;
+                return c_players > d_players;
                 break;
+            }
             case 3:
+            {
                 return c->getDifficulty() > d->getDifficulty();
                 break;
+            }
             case 4:
+            {
                 return c->getServerOwnerLowerCaseName() >
                     d->getServerOwnerLowerCaseName();
                 break;
+            }
             case 5:
+            {
                 return c->getDistance() > d->getDistance();
                 break;
+            }
             }   // switch
             assert(false);
             return false;
@@ -259,7 +280,18 @@ void ServerSelection::loadList()
         if (t)
             icon = track_manager->getTrackIndexByIdent(t->getIdent()) + 2;
         core::stringw num_players;
-        num_players.append(StringUtils::toWString(server->getCurrentPlayers()));
+        int current_players = server->getCurrentPlayers();
+        int current_ai = server->getCurrentAI();
+        current_players -= current_ai;
+        if (current_players < 0)
+            current_players = 0;
+        num_players.append(StringUtils::toWString(current_players));
+        if (current_ai > 0)
+        {
+            num_players.append("(");
+            num_players.append(StringUtils::toWString(current_ai));
+            num_players.append(")");
+        }
         num_players.append("/");
         num_players.append(StringUtils::toWString(server->getMaxPlayers()));
         std::vector<GUIEngine::ListWidget::ListCell> row;
@@ -309,12 +341,14 @@ void ServerSelection::onColumnClicked(int column_id, bool sort_desc, bool sort_d
     if (sort_default)
     {
         m_sort_desc = false;
+        m_sort_default = true;
         m_current_column = 5/*distance*/;
         loadList();
     }
     else
     {
         m_sort_desc = sort_desc;
+        m_sort_default = false;
         m_current_column = column_id;
         loadList();
     }
@@ -429,6 +463,8 @@ void ServerSelection::onUpdate(float dt)
                     all_possible_keys.insert(server->getBookmarkKey());
                 std::map<std::string, uint32_t>& bookmarks =
                     UserConfigParams::m_server_bookmarks;
+                std::map<std::string, uint32_t>& bookmarks_order =
+                    UserConfigParams::m_server_bookmarks_order;
                 auto it = bookmarks.begin();
                 while (it != bookmarks.end())
                 {
@@ -438,7 +474,10 @@ void ServerSelection::onUpdate(float dt)
                         all_possible_keys.end())
                     {
                         if (it->second < limit)
+                        {
                             it = bookmarks.erase(it);
+                            bookmarks_order.erase(it->first);
+                        }
                         else
                             it++;
                     }

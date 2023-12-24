@@ -39,10 +39,10 @@
 #include "guiengine/widgets/label_widget.hpp"
 #include "guiengine/widgets/ribbon_widget.hpp"
 #include "io/file_manager.hpp"
-#include "karts/abstract_kart.hpp"
 #include "karts/controller/controller.hpp"
 #include "karts/controller/end_controller.hpp"
 #include "karts/controller/local_player_controller.hpp"
+#include "karts/ghost_kart.hpp"
 #include "karts/kart_properties.hpp"
 #include "karts/kart_properties_manager.hpp"
 #include "modes/cutscene_world.hpp"
@@ -261,28 +261,31 @@ void RaceResultGUI::enableAllButtons()
     // If we're in a network world, change the buttons text
     if (World::getWorld()->isNetworkWorld())
     {
-        left->setLabel(_("Continue"));
-        left->setImage("gui/icons/green_check.png");
-        left->setVisible(true);
-        operations->select("left", PLAYER_ID_GAME_MASTER);
-        middle->setVisible(false);
-        right->setLabel(_("Quit the server"));
-        right->setImage("gui/icons/main_quit.png");
+        right->setLabel(_("Continue"));
+        right->setImage("gui/icons/green_check.png");
         right->setVisible(true);
+        operations->select("right", PLAYER_ID_GAME_MASTER);
+        middle->setVisible(false);
+        left->setLabel(_("Quit the server"));
+        left->setImage("gui/icons/main_quit.png");
+        left->setVisible(true);
         return;
     }
 
     // If something was unlocked
     // -------------------------
+
+    // Note: Only returns greater than 0 for regular races, despite GPs
+    // showing feature unlocked cutscene.  GPs have their own logic.
     int n = (int)PlayerManager::getCurrentPlayer()
         ->getRecentlyCompletedChallenges().size();
+
     if (n > 0 &&
          (RaceManager::get()->getMajorMode() != RaceManager::MAJOR_MODE_GRAND_PRIX ||
           RaceManager::get()->getTrackNumber() + 1 == RaceManager::get()->getNumOfTracks() ) )
     {
-        middle->setLabel(n == 1 ? _("You completed a challenge!")
-            : _("You completed challenges!"));
-        middle->setImage("gui/icons/cup_gold.png");
+        middle->setLabel(_("Continue"));
+        middle->setImage("gui/icons/green_check.png");
         middle->setVisible(true);
         operations->select("middle", PLAYER_ID_GAME_MASTER);
     }
@@ -294,26 +297,26 @@ void RaceResultGUI::enableAllButtons()
         middle->setImage("gui/icons/green_check.png");
         middle->setVisible(false);
         middle->setFocusable(false);
-        right->setVisible(false);
-        right->setFocusable(false);
+        left->setVisible(false);
+        left->setFocusable(false);
 
         // Two continue buttons to make sure the buttons in the bar is balanced
-        left->setLabel(_("Continue"));
-        left->setImage("gui/icons/green_check.png");
-        left->setVisible(true);
+        right->setLabel(_("Continue"));
+        right->setImage("gui/icons/green_check.png");
+        right->setVisible(true);
 
         if (RaceManager::get()->getTrackNumber() + 1 < RaceManager::get()->getNumOfTracks())
         {
-            right->setLabel(_("Abort Grand Prix"));
-            right->setImage("gui/icons/race_giveup.png");
-            right->setVisible(true);
-            right->setFocusable(true);
-            operations->select("left", PLAYER_ID_GAME_MASTER);
+            left->setLabel(_("Abort Grand Prix"));
+            left->setImage("gui/icons/race_giveup.png");
+            left->setVisible(true);
+            left->setFocusable(true);
+            operations->select("right", PLAYER_ID_GAME_MASTER);
         }
         else
         {
-            left->setVisible(false);
-            left->setFocusable(false);
+            right->setVisible(false);
+            right->setFocusable(false);
             middle->setVisible(true);
             operations->select("middle", PLAYER_ID_GAME_MASTER);
         }
@@ -324,15 +327,15 @@ void RaceResultGUI::enableAllButtons()
         // Normal race
         // -----------
 
-        left->setLabel(_("Restart"));
-        left->setImage("gui/icons/restart.png");
-        left->setVisible(true);
-        operations->select("left", PLAYER_ID_GAME_MASTER);
+        right->setLabel(_("Restart"));
+        right->setImage("gui/icons/restart.png");
+        right->setVisible(true);
+        operations->select("right", PLAYER_ID_GAME_MASTER);
         if (RaceManager::get()->raceWasStartedFromOverworld())
         {
             middle->setVisible(false);
-            right->setLabel(_("Back to challenge selection"));
-            right->setImage("gui/icons/back.png");
+            left->setLabel(_("Back to challenge selection"));
+            left->setImage("gui/icons/back.png");
         }
         else
         {
@@ -347,10 +350,10 @@ void RaceResultGUI::enableAllButtons()
                 middle->setLabel(_("Setup New Race"));
                 middle->setVisible(true);
             }
-            right->setLabel(_("Back to the menu"));
-            right->setImage("gui/icons/back.png");
+            left->setLabel(_("Back to the menu"));
+            left->setImage("gui/icons/back.png");
         }
-        right->setVisible(true);
+        left->setVisible(true);
     }
 }   // enableAllButtons
 
@@ -381,10 +384,12 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
     {
         const std::string& action =
             getWidget<GUIEngine::RibbonWidget>("operations")->getSelectionIDString(PLAYER_ID_GAME_MASTER);
-        if (m_animation_state == RR_WAITING_GP_RESULT && action == "left")
+
+        // User pressed "Continue" button, go from race results to overall GP results
+        if (m_animation_state == RR_WAITING_GP_RESULT && action == "middle")
         {
-            GUIEngine::IconButtonWidget *left = getWidget<GUIEngine::IconButtonWidget>("left");
-            left->setVisible(false);
+            GUIEngine::IconButtonWidget *middle = getWidget<GUIEngine::IconButtonWidget>("middle");
+            middle->setVisible(false);
             getWidget("operations")->setActive(false);
             m_all_row_infos = m_all_row_info_waiting;
             m_animation_state = RR_OLD_GP_RESULTS;
@@ -395,15 +400,15 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
         // If we're playing online :
         if (World::getWorld()->isNetworkWorld())
         {
-            if (action == "left") // Continue button (return to server lobby)
+            if (action == "right") // Continue button (return to server lobby)
             {
                 // Signal to the server that this client is back in the lobby now.
                 auto cl = LobbyProtocol::get<ClientLobby>();
                 if (cl)
                     cl->doneWithResults();
-                getWidget<GUIEngine::IconButtonWidget>("left")->setLabel(_("Waiting for others"));
+                getWidget<GUIEngine::IconButtonWidget>("right")->setLabel(_("Waiting for others"));
             }
-            if (action == "right") // Quit server (return to online lan / wan menu)
+            if (action == "left") // Quit server (return to online lan / wan menu)
             {
                 RaceManager::get()->clearNetworkGrandPrixResult();
                 if (STKHost::existHost())
@@ -419,17 +424,18 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
             return;
         }
 
-        // If something was unlocked, the 'continue' button was
-        // actually used to display "Show unlocked feature(s)" text.
+        // If something was unlocked, the 'continue' button is
+        // used to trigger the unlocked feature(s) cutscene.
         // ---------------------------------------------------------
         PlayerProfile *player = PlayerManager::getCurrentPlayer();
 
+        // Note: Only returns greater than 0 for regular races, despite GPs
+        // showing feature unlocked cutscene.  GPs have their own logic.
         int n = (int)player->getRecentlyCompletedChallenges().size();
 
         if (n > 0 &&
              (RaceManager::get()->getMajorMode() != RaceManager::MAJOR_MODE_GRAND_PRIX ||
               RaceManager::get()->getTrackNumber() + 1 == RaceManager::get()->getNumOfTracks() ) )
-
         {
             if (action == "middle")
             {
@@ -519,16 +525,18 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
         // -----------------
         if (RaceManager::get()->getMajorMode() == RaceManager::MAJOR_MODE_GRAND_PRIX)
         {
-            if (action == "left" || action == "middle")        // Next GP
+            if (action == "right" || action == "middle")        // Next GP
             {
                 cleanupGPProgress();
                 StateManager::get()->popMenu();
                 RaceManager::get()->next();
             }
-            else if (action == "right")        // Abort
+            else if (action == "left")        // Abort
             {
                 new MessageDialog(_("Do you really want to abort the Grand Prix?"),
-                    MessageDialog::MESSAGE_DIALOG_CONFIRM, this, false);
+                    MessageDialog::MESSAGE_DIALOG_CONFIRM, this,
+                    /*delete_listener*/false, /*from_queue*/false,
+                    /*width*/0.6f, /*height*/0.6f, /*focus_on_cancel*/true);
             }
             else if (!getWidget(action.c_str())->isVisible())
             {
@@ -539,7 +547,7 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
         }
 
         StateManager::get()->popMenu();
-        if (action == "left")        // Restart
+        if (action == "right")        // Restart
         {
             RaceManager::get()->rerunRace();
         }
@@ -586,7 +594,7 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
                 StateManager::get()->resetAndSetStack(newStack);
             }
         }
-        else if (action == "right")        // Back to main
+        else if (action == "left")        // Back to main
         {
             RaceManager::get()->exitRace();
             RaceManager::get()->setAIKartOverride("");
@@ -907,6 +915,8 @@ void RaceResultGUI::unload()
                         ri->m_finish_time_string += StringUtils::toWString(ranking_change);
                 }
             }
+            ri->m_laps = World::getWorld()->raceHasLaps() ?
+                World::getWorld()->getFinishedLapsOfKart(ri->m_kart_id) : 0;
 
             core::dimension2du rect =
                 m_font->getDimension(ri->m_kart_name.c_str());
@@ -1125,14 +1135,14 @@ void RaceResultGUI::unload()
                 determineGPLayout();
                 m_all_row_info_waiting = m_all_row_infos;
                 m_all_row_infos = prev_infos;
-                GUIEngine::IconButtonWidget *left = getWidget<GUIEngine::IconButtonWidget>("left");
+                GUIEngine::IconButtonWidget *middle = getWidget<GUIEngine::IconButtonWidget>("middle");
                 GUIEngine::RibbonWidget *operations = getWidget<GUIEngine::RibbonWidget>("operations");
                 operations->setActive(true);
                 operations->setFocusForPlayer(PLAYER_ID_GAME_MASTER);
-                left->setLabel(_("Continue"));
-                left->setImage("gui/icons/green_check.png");
-                left->setVisible(true);
-                operations->select("left", PLAYER_ID_GAME_MASTER);
+                middle->setLabel(_("Continue"));
+                middle->setImage("gui/icons/green_check.png");
+                middle->setVisible(true);
+                operations->select("middle", PLAYER_ID_GAME_MASTER);
             }
             break;
         case RR_WAITING_GP_RESULT:
@@ -1362,6 +1372,7 @@ void RaceResultGUI::unload()
             int p = RaceManager::get()->getKartScore(i);
             ri->m_new_overall_points = p;
             ri->m_new_gp_rank = gp_position;
+            ri->m_laps = World::getWorld()->getFinishedLapsOfKart(i);
         }   // i < num_karts
 #endif
     }   // determineGPLayout
@@ -1440,20 +1451,20 @@ void RaceResultGUI::unload()
             true /* ignoreRTL */);
         current_x += m_width_kart_name + m_width_column_space;
 
-        if (!RaceManager::get()->isLapTrialMode())
+        if (RaceManager::get()->isLapTrialMode())
+        {
+            core::recti pos_laps = core::recti(current_x, y, current_x + 100, y + 10);
+            m_font->draw(irr::core::stringw(ri->m_laps), pos_laps, color, false, false,
+                NULL, true /* ignoreRTL */);
+        }
+        else
         {
             core::recti dest_rect = core::recti(current_x, y, current_x + 100, y + 10);
             m_font->draw(ri->m_finish_time_string, dest_rect, color, false, false,
                 NULL, true /* ignoreRTL */);
             current_x += m_width_finish_time + m_width_column_space;
         }
-        if (RaceManager::get()->isLapTrialMode())
-        {
-            core::recti pos_laps = core::recti(current_x, y, current_x + 100, y + 10);
-            int laps = World::getWorld()->getFinishedLapsOfKart(ri->m_kart_id);
-            m_font->draw(irr::core::stringw(laps), pos_laps, color, false, false,
-                NULL, true /* ignoreRTL */);
-        }
+        
 
         current_x += 100 + m_width_column_space;
 
@@ -1956,8 +1967,50 @@ void RaceResultGUI::unload()
                     white_color, false, false, nullptr, true);
             }
             // display difficulty
-            const core::stringw& difficulty_name =
+            core::stringw difficulty_name =
                 RaceManager::get()->getDifficultyName(RaceManager::get()->getDifficulty());
+            core::stringw difficulty_one;
+            core::stringw difficulty_two;
+            core::recti diff_ghost_one, diff_ghost_two;
+            if (RaceManager::get()->hasGhostKarts() && ReplayPlay::get()->isSecondReplayEnabled())
+            {
+                WorldWithRank* wwr = dynamic_cast<WorldWithRank*>(World::getWorld());
+                for (unsigned k = 0; k < wwr->getNumKarts(); k++)
+                {
+                    GhostKart* gk = dynamic_cast<GhostKart*>(wwr->getKartAtPosition(k + 1));
+                    if (!gk)
+                        continue;
+                    const ReplayPlay::ReplayData& rd = gk->getReplayData();
+                    if (difficulty_one.empty())
+                    {
+                        difficulty_one = RaceManager::get()->getDifficultyName((RaceManager::Difficulty)rd.m_difficulty);
+                        core::dimension2d<u32> dim_1 = m_font->getDimension(difficulty_one.c_str());
+                        RowInfo* ri_1 = &(m_all_row_infos[k]);
+                        diff_ghost_one.UpperLeftCorner.X = ri_1->m_x_pos + m_width_icon + m_width_kart_name + m_width_finish_time + m_width_column_space + 20;
+                        diff_ghost_one.UpperLeftCorner.Y = ri_1->m_y_pos;
+                        diff_ghost_one.LowerRightCorner.X = diff_ghost_one.UpperLeftCorner.X + dim_1.Width;
+                        diff_ghost_one.LowerRightCorner.Y = diff_ghost_one.UpperLeftCorner.Y + dim_1.Height;
+                    }
+                    else if (difficulty_two.empty())
+                    {
+                        difficulty_two = RaceManager::get()->getDifficultyName((RaceManager::Difficulty)rd.m_difficulty);
+                        core::dimension2d<u32> dim_2 = m_font->getDimension(difficulty_two.c_str());
+                        RowInfo* ri_2 = &(m_all_row_infos[k]);
+                        diff_ghost_two.UpperLeftCorner.X = ri_2->m_x_pos + m_width_icon + m_width_kart_name + m_width_finish_time + m_width_column_space + 20;
+                        diff_ghost_two.UpperLeftCorner.Y = ri_2->m_y_pos;
+                        diff_ghost_two.LowerRightCorner.X = diff_ghost_two.UpperLeftCorner.X + dim_2.Width;
+                        diff_ghost_two.LowerRightCorner.Y = diff_ghost_two.UpperLeftCorner.Y + dim_2.Height;
+                    }
+                }
+                if (difficulty_one != difficulty_two)
+                    difficulty_name = difficulty_one + L" / " + difficulty_two;
+                else
+                    difficulty_name = difficulty_one;
+
+                // Left side difficulty display
+                m_font->draw(difficulty_one, diff_ghost_one, video::SColor(255, 255, 255, 255), false, false, nullptr, true);
+                m_font->draw(difficulty_two, diff_ghost_two, video::SColor(255, 255, 255, 255), false, false, nullptr, true);
+            }
             core::stringw difficulty_string = _("Difficulty: %s", difficulty_name);
             current_y += int(m_distance_between_meta_rows * 0.8f);
             GUIEngine::getFont()->draw(difficulty_string,
@@ -2089,15 +2142,7 @@ void RaceResultGUI::unload()
                                        y + GUIEngine::getSmallFontHeight()), text_color, false, false, nullptr, true);
             }
 
-            position_passed = (kart->getPosition() <= c_data->getMaxPosition(RaceManager::DIFFICULTY_BEST) && lose_all == false)
-                                || c_data->getMaxPosition(RaceManager::DIFFICULTY_BEST) == -1;
-            time_passed = (kart->getFinishTime() <= c_data->getTimeRequirement(RaceManager::DIFFICULTY_BEST) && lose_all == false)
-                                || c_data->getTimeRequirement(RaceManager::DIFFICULTY_BEST) <= 0.0f;
-            energy_passed = (kart->getEnergy() >= c_data->getEnergy(RaceManager::DIFFICULTY_BEST) && lose_all == false)
-                                || c_data->getEnergy(RaceManager::DIFFICULTY_BEST) <= 0;
-            bool best_while_slower = position_passed && time_passed && energy_passed && RaceManager::get()->getDifficulty() != RaceManager::DIFFICULTY_BEST;
-
-            if(best_while_slower)
+            if (c_data->isChallengeFulfilled(true) && RaceManager::get()->getDifficulty() != RaceManager::DIFFICULTY_BEST)
             {
                 text_string = _("Reached Requirements of SuperTux");
                 text_color = special_color;

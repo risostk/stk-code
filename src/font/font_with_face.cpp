@@ -33,6 +33,7 @@
 #include "utils/utf8.h"
 
 #include "GlyphLayout.h"
+#include "IVideoDriver.h"
 #include <array>
 #ifndef SERVER_ONLY
 #include <ge_texture.hpp>
@@ -402,8 +403,8 @@ void FontWithFace::dumpGlyphPage()
  */
 void FontWithFace::setDPI()
 {
-    float scale = std::min(irr_driver->getActualScreenSize().Height,
-                             irr_driver->getActualScreenSize().Width)  / 720.0f;
+    float scale = std::min(irr_driver->getActualScreenSize().Height / 720.0f,
+                             irr_driver->getActualScreenSize().Width  / 900.0f);
     int factorTwo = getScalingFactorTwo();
     
     if (UserConfigParams::m_font_size < 0)

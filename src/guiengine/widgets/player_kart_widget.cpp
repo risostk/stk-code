@@ -21,7 +21,7 @@
 #include "audio/sfx_manager.hpp"
 #include "config/player_manager.hpp"
 #include "config/user_config.hpp"
-#include "graphics/render_info.hpp"
+#include <ge_render_info.hpp>
 #include "guiengine/widgets/kart_stats_widget.hpp"
 #include "guiengine/widgets/model_view_widget.hpp"
 #include "guiengine/widgets/player_name_spinner.hpp"
@@ -702,7 +702,7 @@ void PlayerKartWidget::setSize(const int x, const int y, const int w, const int 
     else
     {
         const int modelMaxHeight = h - kart_name_h - player_name_h;
-        const int modelMaxWidth =  w;
+        const int modelMaxWidth =  w / 2;
         const int bestSize = std::min(modelMaxWidth, modelMaxHeight);
         const int modelY = y + player_name_h;
         model_x = x + w/4 - (int)(bestSize/2);

@@ -66,6 +66,8 @@
 #include "utils/translation.hpp"
 #include "io/rich_presence.hpp"
 
+#include <IrrlichtDevice.h>
+
 #ifdef __SWITCH__
 extern "C" {
   #define u64 uint64_t
@@ -449,6 +451,12 @@ void RaceManager::startNew(bool from_overworld)
 
     Log::verbose("RaceManager", "Nb of karts=%u, ghost karts:%u ai:%lu players:%lu\n",
         (unsigned int) m_num_karts, m_num_ghost_karts, m_ai_kart_list.size(), m_player_karts.size());
+    std::set<std::string> used_karts;
+    for (auto& kart : m_ai_kart_list)
+        used_karts.insert(kart);
+    for (auto& kart : m_player_karts)
+        used_karts.insert(kart.getKartName());
+    kart_properties_manager->onDemandLoadKartTextures(used_karts);
 
     assert((unsigned int)m_num_karts == m_num_ghost_karts+m_ai_kart_list.size()+m_player_karts.size());
 
@@ -556,6 +564,7 @@ void RaceManager::startNextRace()
         GUIEngine::clearLoadingTips();
         GUIEngine::renderLoading(true/*clearIcons*/, false/*launching*/, false/*update_tips*/);
         device->getVideoDriver()->endScene();
+        GUIEngine::flushRenderLoading(false/*launching*/);
     }
 
     m_num_finished_karts   = 0;
@@ -591,6 +600,7 @@ void RaceManager::startNextRace()
     else
     {
         const bool random_pos_available = !NetworkConfig::get()->isNetworking() &&
+            !m_has_ghost_karts &&
             (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_NORMAL_RACE
             || RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL
             || RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER);
@@ -975,17 +985,23 @@ void RaceManager::exitRace(bool delete_world)
 
         StateManager::get()->enterGameState();
         setMinorMode(RaceManager::MINOR_MODE_CUTSCENE);
+        int num_gp_karts = m_num_karts;
         setNumKarts(0);
         setNumPlayers(0);
 
+        std::set<std::string> used_karts;
         if (some_human_player_well_ranked)
         {
             startSingleRace("gpwin", 999,
                                   raceWasStartedFromOverworld());
             GrandPrixWin* scene = GrandPrixWin::getInstance();
             scene->push();
+            scene->setNumGPKarts(num_gp_karts); // This must be set before we set karts
             scene->setKarts(winners);
             scene->setPlayerWon(some_human_player_won);
+            std::set<std::string> karts;
+            for (auto& kart : winners)
+                used_karts.insert(kart.first);
         }
         else
         {
@@ -997,6 +1013,8 @@ void RaceManager::exitRace(bool delete_world)
             if (humanLosers.size() >= 1)
             {
                 scene->setKarts(humanLosers);
+                for (auto& kart : humanLosers)
+                    used_karts.insert(kart.first);
             }
             else
             {
@@ -1004,9 +1022,12 @@ void RaceManager::exitRace(bool delete_world)
                            "This should have never happened\n");
                 std::vector<std::pair<std::string, float> > karts;
                 karts.emplace_back(UserConfigParams::m_default_kart, 0.0f);
+                used_karts.insert(UserConfigParams::m_default_kart);
                 scene->setKarts(karts);
             }
         }
+
+        kart_properties_manager->onDemandLoadKartTextures(used_karts);
     }
 
     if (delete_world)
@@ -1016,6 +1037,8 @@ void RaceManager::exitRace(bool delete_world)
         World::deleteWorld();
     }
 
+    // Reload track screenshot after delete_world (track textures are unloaded)
+    track_manager->onDemandLoadTrackScreenshots();
     m_saved_gp = NULL;
     m_track_number = 0;
 
@@ -1098,6 +1121,7 @@ void RaceManager::startGP(const GrandPrixData &gp, bool from_overworld,
  * \param trackIdent Internal name of the track to race on
  * \param num_laps   Number of laps to race, or -1 if number of laps is
  *        not relevant in current mode
+ * \param from_overworld If it was started from the Story Mode overworld
  */
 void RaceManager::startSingleRace(const std::string &track_ident,
                                   const int num_laps,
@@ -1291,7 +1315,10 @@ core::stringw RaceManager::getDifficultyName(Difficulty diff) const
         case RaceManager::DIFFICULTY_MEDIUM: return _("Intermediate"); break;
         case RaceManager::DIFFICULTY_HARD:   return _("Expert");   break;
         case RaceManager::DIFFICULTY_BEST:   return _("SuperTux");   break;
-        default:  assert(false);
+        default:    Log::error("RaceManager", "Difficulty level '%u' is unknown.", diff);
+                    // Uncomment to generate a crash and backtrace, if the cause of the
+                    // incorrect difficulty level is unknown (i.e. not online servers' settings)
+                    // assert(false);
     }
     return "";
 }   // getDifficultyName

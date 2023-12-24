@@ -46,6 +46,9 @@
 #include "utils/profiler.hpp"
 #include "utils/cpp2011.hpp"
 
+#include <IrrlichtDevice.h>
+#include <IFileSystem.h>
+#include <ISceneManager.h>
 #include <SViewFrustum.h>
 #include <ge_texture.hpp>
 
@@ -1078,9 +1081,9 @@ void PostProcessing::renderGodRays(scene::ICameraSceneNode * const camnode,
     const SColor col = track->getGodRaysColor();
 
     // The sun interposer
-    SP::SPDynamicDrawCall* sun = irr_driver->getSunInterposer();
+    SP::SPDynamicDrawCall* sun_ = irr_driver->getSunInterposer();
     // This will only do thing when you update the sun position
-    sun->uploadInstanceData();
+    sun_->uploadInstanceData();
     SP::SPShader* glow_shader = SP::getGlowShader();
     glow_shader->use();
     SP::SPUniformAssigner* glow_color_assigner = glow_shader
@@ -1088,7 +1091,7 @@ void PostProcessing::renderGodRays(scene::ICameraSceneNode * const camnode,
     assert(glow_color_assigner != NULL);
     video::SColorf cf(track->getGodRaysColor());
     glow_color_assigner->setValue(core::vector3df(cf.r, cf.g, cf.b));
-    sun->draw();
+    sun_->draw();
     glow_shader->unuse();
     glDisable(GL_DEPTH_TEST);
 

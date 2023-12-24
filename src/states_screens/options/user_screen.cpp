@@ -113,7 +113,7 @@ void BaseUserScreen::init()
 {
 #ifndef SERVER_ONLY
     getWidget<IconButtonWidget>("default_kart_color")
-        ->setVisible(CVS->isGLSL());
+        ->setVisible(CVS->supportsColorization());
 #endif
 
     m_password_tb->setPasswordBox(true, L'*');
@@ -404,8 +404,7 @@ void BaseUserScreen::eventCallback(Widget* widget,
     }
     else if (name == "password_reset")
     {
-        // Open password reset page
-        Online::LinkHelper::openURL(stk_config->m_password_reset_url);
+        new RecoveryDialog();
     }
     else if (name == "options")
     {
@@ -428,10 +427,6 @@ void BaseUserScreen::eventCallback(Widget* widget,
         {
             // EscapePressed will pop this screen.
             StateManager::get()->escapePressed();
-        }
-        else if (button == "recover")
-        {
-            new RecoveryDialog();
         }
         else if (button == "rename")
         {

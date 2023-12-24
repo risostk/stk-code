@@ -21,6 +21,8 @@
 #include "config/stk_config.hpp"
 #include "config/user_config.hpp"
 #include "graphics/irr_driver.hpp"
+#include "graphics/material.hpp"
+#include "graphics/material_manager.hpp"
 #include "graphics/sp/sp_base.hpp"
 #include "graphics/material_manager.hpp"
 #include "io/file_manager.hpp"
@@ -48,6 +50,7 @@
 std::vector<scene::IMesh *>  ItemManager::m_item_mesh;
 std::vector<scene::IMesh *>  ItemManager::m_item_lowres_mesh;
 std::vector<video::SColorf>  ItemManager::m_glow_color;
+std::vector<std::string>     ItemManager::m_icon;
 bool                         ItemManager::m_disable_item_collection = false;
 std::mt19937                 ItemManager::m_random_engine;
 uint32_t                     ItemManager::m_random_seed = 0;
@@ -60,9 +63,11 @@ void ItemManager::loadDefaultItemMeshes()
     m_item_mesh.clear();
     m_item_lowres_mesh.clear();
     m_glow_color.clear();
+    m_icon.clear();
     m_item_mesh.resize(ItemState::ITEM_LAST-ItemState::ITEM_FIRST+1, NULL);
     m_glow_color.resize(ItemState::ITEM_LAST-ItemState::ITEM_FIRST+1,
                         video::SColorf(255.0f, 255.0f, 255.0f) );
+    m_icon.resize(ItemState::ITEM_LAST-ItemState::ITEM_FIRST+1, "");
 
     m_item_lowres_mesh.resize(ItemState::ITEM_LAST-ItemState::ITEM_FIRST+1, NULL);
 
@@ -114,9 +119,27 @@ void ItemManager::loadDefaultItemMeshes()
 #endif
             m_item_lowres_mesh[i]->grab();
         }
+        std::string icon = "icon-" + item_names[(ItemState::ItemType)i] + ".png";
+        if (preloadIcon(icon))
+            m_icon[i] = icon;
     }   // for i
     delete root;
+    preloadIcon("item_spark.png");
 }   // loadDefaultItemMeshes
+
+//-----------------------------------------------------------------------------
+/** Preload icon materials to avoid hangs when firstly insert item
+ */
+bool ItemManager::preloadIcon(const std::string& name)
+{
+    // From IrrDriver::addBillboard
+    Material* m = material_manager->getMaterial(name, false/*full_path*/,
+        /*make_permanent*/true, /*complain_if_not_found*/true,
+        /*strip_path*/false, /*install*/false);
+    return m->getTexture(true/*srgb*/, m->getShaderName() == "additive" ||
+        m->getShaderName() == "alphablend" ? true : false/*premul_alpha*/) !=
+        NULL;
+}   // preloadIcon
 
 //-----------------------------------------------------------------------------
 /** Clean up all textures. This is necessary when switching resolution etc.
@@ -316,7 +339,8 @@ Item* ItemManager::dropNewItem(ItemState::ItemType type,
     }
 
     Item* item = new Item(type, pos, normal, m_item_mesh[mesh_type],
-                          m_item_lowres_mesh[mesh_type], /*prev_owner*/kart);
+                          m_item_lowres_mesh[mesh_type], m_icon[mesh_type],
+                          /*prev_owner*/kart);
 
     // restoreState in NetworkItemManager will handle the insert item
     if (!server_xyz)
@@ -348,7 +372,8 @@ Item* ItemManager::placeItem(ItemState::ItemType type, const Vec3& xyz,
     ItemState::ItemType mesh_type = type;
 
     Item* item = new Item(type, xyz, normal, m_item_mesh[mesh_type],
-                          m_item_lowres_mesh[mesh_type], /*prev_owner*/NULL);
+                          m_item_lowres_mesh[mesh_type], m_icon[mesh_type],
+                          /*prev_owner*/NULL);
 
     insertItem(item);
     if (m_switch_ticks >= 0)

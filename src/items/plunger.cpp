@@ -39,6 +39,8 @@
 #include "utils/string_utils.hpp"
 #include "utils/translation.hpp"
 
+#include <ISceneNode.h>
+
 // -----------------------------------------------------------------------------
 Plunger::Plunger(AbstractKart *kart)
        : Flyable(kart, PowerupManager::POWERUP_PLUNGER)

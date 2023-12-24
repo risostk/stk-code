@@ -134,6 +134,12 @@ namespace ServerConfig
         "Maximum number of players on the server, setting this to a value "
         "greater than 8 can cause performance degradation."));
 
+    SERVER_CFG_PREFIX IntServerConfigParam m_max_players_in_game
+        SERVER_CFG_DEFAULT(IntServerConfigParam(0, "max-players-in-game",
+        "Maximum number of players in the game, all other players on "
+        "the server are spectators. Specify 0 to allow all players on "
+        "the server to play."));
+
     SERVER_CFG_PREFIX StringServerConfigParam m_private_server_password
         SERVER_CFG_DEFAULT(StringServerConfigParam("",
         "private-server-password", "Password for private server, "
@@ -266,6 +272,13 @@ namespace ServerConfig
         "used in server is FFA, CTF or soccer, also official-karts-threshold "
         "will be made 1.0. If false addon karts will use their original "
         "hitbox other than tux, all players having it restriction applies."));
+
+    SERVER_CFG_PREFIX BoolServerConfigParam m_real_addon_karts
+        SERVER_CFG_DEFAULT(BoolServerConfigParam(true, "real-addon-karts",
+        "If true, server will send its addon karts real physics (kart size, "
+        "length, type, etc) to client. If false or client chooses an addon "
+        "kart which server is missing, tux's kart physics and kart type of "
+        "the original addon is sent."));
 
     SERVER_CFG_PREFIX FloatServerConfigParam m_flag_return_timeout
         SERVER_CFG_DEFAULT(FloatServerConfigParam(20.0f, "flag-return-timeout",

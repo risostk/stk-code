@@ -72,6 +72,8 @@ using namespace irr;
 
 #include <algorithm>
 
+#include <IrrlichtDevice.h>
+
 /** The constructor is called before anything is attached to the scene node.
  *  So rendering to a texture can be done here. But world is not yet fully
  *  created, so only the race manager can be accessed safely.
@@ -204,7 +206,7 @@ void RaceGUI::calculateMinimapSize()
     // Originally m_map_height was 100, and we take 480 as minimum res
     float scaling = std::min(irr_driver->getFrameSize().Height,  
                              irr_driver->getFrameSize().Width) / 480.0f;
-    const float map_size = stk_config->m_minimap_size * map_size_splitscreen;
+    const float map_size = UserConfigParams::m_minimap_size * map_size_splitscreen;
     const float top_margin = 3.5f * m_font_height;
     
     // Check if we have enough space for minimap when touch steering is enabled
@@ -227,8 +229,8 @@ void RaceGUI::calculateMinimapSize()
     
     // Marker texture has to be power-of-two for (old) OpenGL compliance
     //m_marker_rendered_size  =  2 << ((int) ceil(1.0 + log(32.0 * scaling)));
-    m_minimap_ai_size       = (int)( stk_config->m_minimap_ai_icon     * scaling);
-    m_minimap_player_size   = (int)( stk_config->m_minimap_player_icon * scaling);
+    m_minimap_ai_size       = (int)(UserConfigParams::m_minimap_ai_icon_size * scaling);
+    m_minimap_player_size   = (int)(UserConfigParams::m_minimap_player_icon_size * scaling);
     m_map_width             = (int)(map_size * scaling);
     m_map_height            = (int)(map_size * scaling);
 
@@ -596,6 +598,8 @@ void RaceGUI::drawGlobalMiniMap()
     if (ctf_world)
     {
         Vec3 draw_at;
+        video::SColor translucence((unsigned)-1);
+        translucence.setAlpha(128);
         if (!ctf_world->isRedFlagInBase())
         {
             track->mapPoint2MiniMap(Track::getCurrentTrack()->getRedFlag().getOrigin(),
@@ -605,7 +609,7 @@ void RaceGUI::drawGlobalMiniMap()
                 lower_y   -(int)(draw_at.getY()+(m_minimap_player_size/2.2f)),
                 m_map_left+(int)(draw_at.getX()+(m_minimap_player_size/1.4f)),
                 lower_y   -(int)(draw_at.getY()-(m_minimap_player_size/2.2f)));
-            draw2DImage(m_red_flag, rp, rs, NULL, NULL, true, true);
+            draw2DImage(m_red_flag, rp, rs, NULL, translucence, true);
         }
         Vec3 pos = ctf_world->getRedHolder() == -1 ? ctf_world->getRedFlag() :
             ctf_world->getKart(ctf_world->getRedHolder())->getSmoothedTrans().getOrigin();
@@ -627,7 +631,7 @@ void RaceGUI::drawGlobalMiniMap()
                 lower_y   -(int)(draw_at.getY()+(m_minimap_player_size/2.2f)),
                 m_map_left+(int)(draw_at.getX()+(m_minimap_player_size/1.4f)),
                 lower_y   -(int)(draw_at.getY()-(m_minimap_player_size/2.2f)));
-            draw2DImage(m_blue_flag, rp, rs, NULL, NULL, true, true);
+            draw2DImage(m_blue_flag, rp, rs, NULL, translucence, true);
         }
 
         pos = ctf_world->getBlueHolder() == -1 ? ctf_world->getBlueFlag() :
@@ -646,6 +650,7 @@ void RaceGUI::drawGlobalMiniMap()
     if (UserConfigParams::m_karts_powerup_gui)
     {
         ItemManager* itm = track->getItemManager();
+        // const Powerup* powerup = kart->getPowerup();
         int marker_half_size = m_minimap_ai_size>>1;
         for (unsigned i = 0; i < itm->getNumberOfItems(); i++)
         {
@@ -655,6 +660,7 @@ void RaceGUI::drawGlobalMiniMap()
                 if (it->isAvailable()) // only show collectable items
                 {
                     video::ITexture *icon_item = itm->getIcon(it->getType())->getTexture();
+                    // video::ITexture *icon_item = powerup->getIcon(it->getType())->getTexture();
                     assert(icon_item);
                     if (icon_item != NULL)
                     {
@@ -747,25 +753,31 @@ void RaceGUI::drawGlobalMiniMap()
                     color = video::SColor(255, 0, 0, 200);
                 }
             }
-                                  
+
             video::SColor colors[4] = {color, color, color, color};
 
             const core::rect<s32> rect(core::position2d<s32>(0,0),
                                         m_icons_frame->getSize());
 
-            // show kart direction
-            // Find the direction a kart is moving in
-            btTransform trans = kart->getTrans();
-            Vec3 direction(trans.getBasis().getColumn(2));
-            // Get the rotation to rotate the icon frame
-            float rotation = atan2f(direction.getZ(),direction.getX());
-            if (track->getMinimapInvert())
-            {   // correct the direction due to invert minimap for blue
-                rotation = rotation + M_PI;
+            // show kart direction in soccer
+            if (soccer_world)
+            {
+                // Find the direction a kart is moving in
+                btTransform trans = kart->getTrans();
+                Vec3 direction(trans.getBasis().getColumn(2));
+                // Get the rotation to rotate the icon frame
+                float rotation = atan2f(direction.getZ(),direction.getX());
+                if (track->getMinimapInvert())
+                {   // correct the direction due to invert minimap for blue
+                    rotation = rotation + M_PI;
+                }
+                rotation = -1.0f * rotation + 0.25f * M_PI; // icons-frame_arrow.png was rotated by 45 degrees
+                draw2DImageRotationColor(m_icons_frame, position, rect, NULL, rotation, color);
             }
-            rotation = -1.0f * rotation + 0.25f * M_PI; // icons-frame_arrow.png was rotated by 45 degrees
-            draw2DImage(m_icons_frame, position, rect, NULL, colors, true, false, rotation);
-
+            else
+            {
+                draw2DImage(m_icons_frame, position, rect, NULL, colors, true);
+            }
         }   // if isPlayerController
 
         // icon squash with kart squash
@@ -852,6 +864,7 @@ void RaceGUI::drawGlobalMiniMap()
         RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_TIME_TRIAL ||
         RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_FOLLOW_LEADER)
     {
+        video::SColor color = video::SColor(255, 200, 0, 0);
         // Loop all checklines
         core::rect<s32> rect(core::position2di(0, 0), m_checkline_icon->getSize());
         CheckManager* cm = Track::getCurrentTrack()->getCheckManager();
@@ -877,7 +890,7 @@ void RaceGUI::drawGlobalMiniMap()
                                          m_map_left+(int)(draw_at.getX()+half_line_size),
                                          lower_y   -(int)(draw_at.getY()-half_line_size));
 
-                draw2DImage(m_checkline_icon, position, rect, NULL, NULL, true, false, -1.0f*rotation);
+                draw2DImageRotationColor(m_checkline_icon, position, rect, NULL, -1.0f*rotation, color);
             }
         }
     }
