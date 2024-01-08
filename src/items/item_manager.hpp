@@ -96,7 +96,7 @@ public:
                                       { return m_item_lowres_mesh[type]; }
     // ------------------------------------------------------------------------
     /** Returns the mesh for a certain item. */
-    static std::string getIcon(ItemState::ItemType type)
+    Material* getIcon(ItemState::ItemType type)
                                       { return m_all_icons[type]; }
     // ------------------------------------------------------------------------
     /** Returns the mesh for a certain item (string of the icon path). */
