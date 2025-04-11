@@ -22,6 +22,7 @@
 #include "guiengine/scalable_font.hpp"
 #include "guiengine/widgets/spinner_widget.hpp"
 #include "io/file_manager.hpp"
+#include "states_screens/state_manager.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/log.hpp"
 
@@ -96,14 +97,52 @@ SpinnerWidget::SpinnerWidget(const bool gauge) : Widget(WTYPE_SPINNER)
     m_check_inside_me = true; //FIXME: not sure this is necessary
     m_supports_multiplayer = true;
     m_value = -1;
+    m_badge_x_shift = 0;
     m_use_background_color=false;
-    m_spinner_widget_player_id=-1;
+    m_spinner_widget_player_id=PLAYER_ID_GAME_MASTER;
     m_min = 0;
     m_max = 999;
     m_step = 1.0;
     m_left_selected = false;
     m_right_selected = false;
+    m_incorrect       = false;
+    m_red_mark_widget = NULL;
 }
+
+// ------------------------------------------------------------------------
+/** Add a red mark on the spinner to mean "invalid choice" */
+void SpinnerWidget::markAsIncorrect()
+{
+    if (m_incorrect) return; // already flagged as incorrect
+
+    m_incorrect = true;
+
+    irr::video::ITexture* texture = irr_driver->getTexture(FileManager::GUI_ICON,
+                                                           "red_mark.png"   );
+    const int mark_size = m_h * 4 / 5;
+    const int mark_x = m_w - m_h * 19 / 10;
+    const int mark_y = m_h / 10;
+    core::recti red_mark_area(mark_x, mark_y, mark_x + mark_size,
+                              mark_y + mark_size);
+    m_red_mark_widget = GUIEngine::getGUIEnv()->addImage( red_mark_area,
+                        /* parent */ m_element );
+    m_red_mark_widget->setImage(texture);
+    m_red_mark_widget->setScaleImage(true);
+    m_red_mark_widget->setTabStop(false);
+    m_red_mark_widget->setUseAlphaChannel(true);
+} // markAsIncorrect
+
+// ------------------------------------------------------------------------
+/** Remove any red mark set with 'markAsIncorrect' */
+void SpinnerWidget::markAsCorrect()
+{
+    if (m_incorrect)
+    {
+        m_red_mark_widget->remove();
+        m_red_mark_widget = NULL;
+        m_incorrect = false;
+    }
+} // markAsCorrect
 
 // -----------------------------------------------------------------------------
 void SpinnerWidget::setRange(float min, float max, float step)
@@ -169,22 +208,20 @@ void SpinnerWidget::add()
         widgetID = getNewID();
     }
 
-    rect<s32> widget_size = rect<s32>(m_x, m_y, m_x + m_w, m_y + m_h);
+    // To be resized later
+    rect<s32> widget_size = rect<s32>(0, 0, 1, 1);
     IGUIButton * btn = new SpinnerIrrElement(widget_size, m_parent, widgetID, this);
     m_element = btn;
 
     m_element->setTabOrder( m_element->getID() );
 
     // left arrow
-    rect<s32> subsize_left_arrow = rect<s32>(0 ,0, m_h, m_h);
-    IGUIButton * left_arrow = GUIEngine::getGUIEnv()->addButton(subsize_left_arrow, btn, getNewNoFocusID(), L" ");
+    IGUIButton * left_arrow = GUIEngine::getGUIEnv()->addButton(widget_size, btn, getNewNoFocusID(), L" ");
     m_children[0].m_element = left_arrow;
     left_arrow->setTabStop(false);
     m_children[0].m_event_handler = this;
     m_children[0].m_properties[PROP_ID] = "left";
     m_children[0].m_id = m_children[0].m_element->getID();
-
-    m_badge_x_shift = subsize_left_arrow.getWidth();
 
     // label
     if (m_graphical)
@@ -192,11 +229,7 @@ void SpinnerWidget::add()
         ITexture* texture = getTexture();
         assert(texture != NULL);
 
-        const int texture_width = texture->getSize().Width;
-        const int free_h_space = m_w - m_h*2 - texture_width; // to center image
-
-        rect<s32> subsize_label = rect<s32>(m_h + free_h_space/2, 0, m_w - m_h+ free_h_space/2, m_h);
-        IGUIImage * subbtn = GUIEngine::getGUIEnv()->addImage(subsize_label, btn, getNewNoFocusID());
+        IGUIImage * subbtn = GUIEngine::getGUIEnv()->addImage(widget_size, btn, getNewNoFocusID());
         m_children[1].m_element = subbtn;
         m_children[1].m_id = subbtn->getID();
         m_children[1].m_event_handler = this;
@@ -208,9 +241,8 @@ void SpinnerWidget::add()
     }
     else
     {
-        rect<s32> subsize_label = rect<s32>(m_h, 0, m_w - m_h, m_h);
         stringw text = stringw(m_value);
-        IGUIStaticText* label = GUIEngine::getGUIEnv()->addStaticText(text.c_str(), subsize_label,
+        IGUIStaticText* label = GUIEngine::getGUIEnv()->addStaticText(text.c_str(), widget_size,
                                                                       false /* border */, true /* word wrap */,
                                                                       btn, getNewNoFocusID());
         m_children[1].m_element = label;
@@ -225,17 +257,11 @@ void SpinnerWidget::add()
         {
             label->setText(m_labels[m_value].c_str() );
         }
-
-        if (widget_size.getHeight() < GUIEngine::getFontHeight())
-        {
-            label->setOverrideFont(GUIEngine::getSmallFont());
-        }
     }
 
 
     // right arrow
-    rect<s32> subsize_right_arrow = rect<s32>(m_w - m_h, 0, m_w, m_h);
-    IGUIButton * right_arrow = GUIEngine::getGUIEnv()->addButton(subsize_right_arrow, btn, getNewNoFocusID(), L"  ");
+    IGUIButton * right_arrow = GUIEngine::getGUIEnv()->addButton(widget_size, btn, getNewNoFocusID(), L"  ");
     right_arrow->setTabStop(false);
     m_children[2].m_element = right_arrow;
     m_children[2].m_event_handler = this;
@@ -243,8 +269,7 @@ void SpinnerWidget::add()
     m_children[2].m_id = m_children[2].m_element->getID();
 
     // refresh display
-
-
+    resize();
     setValue(m_value);
 }
 // -----------------------------------------------------------------------------
@@ -260,12 +285,13 @@ ITexture* SpinnerWidget::getTexture()
 
 // -----------------------------------------------------------------------------
 
-void SpinnerWidget::move(const int x, const int y, const int w, const int h)
+void SpinnerWidget::resize()
 {
-    Widget::move(x, y, w, h);
+    Widget::resize();
 
-    rect<s32> subsize_left_arrow = rect<s32>(0 ,0, h, h);
+    rect<s32> subsize_left_arrow = rect<s32>(0 ,0, m_h, m_h);
     m_children[0].m_element->setRelativePosition(subsize_left_arrow);
+    m_badge_x_shift = subsize_left_arrow.getWidth();
 
     if (m_graphical)
     {
@@ -273,18 +299,27 @@ void SpinnerWidget::move(const int x, const int y, const int w, const int h)
         assert(texture != NULL);
 
         const int texture_width = texture->getSize().Width;
-        const int free_h_space = w-h*2-texture_width; // to center image
+        const int free_h_space = m_w-m_h*2-texture_width; // to center image
 
-        rect<s32> subsize_label = rect<s32>(h+free_h_space/2, 0, w-h+free_h_space/2, h);
+        rect<s32> subsize_label = rect<s32>(m_h+free_h_space/2, 0, m_w-m_h+free_h_space/2, m_h);
         m_children[1].m_element->setRelativePosition(subsize_label);
     }
     else
     {
-        rect<s32> subsize_label = rect<s32>(h, 0, w-h, h);
-        m_children[1].m_element->setRelativePosition(subsize_label);
+        rect<s32> subsize_label = rect<s32>(m_h, 0, m_w-m_h, m_h);
+        IGUIStaticText* label = static_cast<IGUIStaticText*>(m_children[1].m_element);
+        label->setRelativePosition(subsize_label);
+        if (m_h < GUIEngine::getFontHeight())
+        {
+            label->setOverrideFont(GUIEngine::getSmallFont());
+        }
+        else
+        {
+            label->setOverrideFont(NULL);
+        }
     }
 
-    rect<s32> subsize_right_arrow = rect<s32>(w-h, 0, w, h);
+    rect<s32> subsize_right_arrow = rect<s32>(m_w-m_h, 0, m_w, m_h);
     m_children[2].m_element->setRelativePosition(subsize_right_arrow);
 }
 
@@ -461,11 +496,7 @@ stringw SpinnerWidget::getStringValue() const
         stringw text = StringUtils::insertValues(m_text.c_str(), m_value);
         return text;
     }
-    else
-    {
-        assert(false);
-    }
-    /** To avoid compiler warnings about missing return statements. */
+    // This can happen if the spinner has not been initialized yet.
     return "";
 }
 

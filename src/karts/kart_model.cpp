@@ -213,9 +213,11 @@ void KartModel::loadInfo(const XMLNode &node)
     {
         if (const XMLNode *speed_weighted_objects_node = node.getNode("speed-weighted-objects"))
         {
-            for (unsigned int i = 0 ;i < speed_weighted_objects_node->getNumNodes() ; i++)
+            unsigned speed_weighted_objects_size = speed_weighted_objects_node->getNumNodes();
+            m_speed_weighted_objects.resize(speed_weighted_objects_size);
+            for (unsigned int i = 0 ;i < speed_weighted_objects_size; i++)
             {
-                loadSpeedWeightedInfo(speed_weighted_objects_node->getNode(i));
+                loadSpeedWeightedInfo(speed_weighted_objects_node->getNode(i), i);
             }
         }
         if (const XMLNode* headlights_node = node.getNode("headlights"))
@@ -265,7 +267,8 @@ KartModel::~KartModel()
         if(m_is_master && m_wheel_model[i])
         {
             irr_driver->dropAllTextures(m_wheel_model[i]);
-            irr_driver->removeMeshFromCache(m_wheel_model[i]);
+            if (m_wheel_model[i]->getReferenceCount() == 1)
+                irr_driver->removeMeshFromCache(m_wheel_model[i]);
         }
     }
 
@@ -797,9 +800,9 @@ void KartModel::loadNitroEmitterInfo(const XMLNode &node,
 }   // loadNitroEmitterInfo
 
 // ----------------------------------------------------------------------------
-
 /** Loads a single speed weighted node. */
-void KartModel::loadSpeedWeightedInfo(const XMLNode* speed_weighted_node)
+void KartModel::loadSpeedWeightedInfo(const XMLNode* speed_weighted_node,
+                                      int index)
 {
     SpeedWeightedObject obj;
     if (speed_weighted_node->getName() == "object")
@@ -824,7 +827,7 @@ void KartModel::loadSpeedWeightedInfo(const XMLNode* speed_weighted_node)
     }
     if (!obj.m_name.empty())
     {
-        m_speed_weighted_objects.push_back(obj);
+        m_speed_weighted_objects[index] = obj;
         float dx = 0.0f;
         float dy = 0.0f;
         float dt = 0.0f;
@@ -835,7 +838,7 @@ void KartModel::loadSpeedWeightedInfo(const XMLNode* speed_weighted_node)
         speed_weighted_node->get("animated-by-step", &step);
         if (dx != 0.0f || dy != 0.0f)
         {
-            m_speed_weighted_objects.back().m_properties.m_moving_texture =
+            m_speed_weighted_objects[index].m_properties.m_moving_texture =
                 new MovingTexture(dx, dy, dt, step);
         }
     }
@@ -1320,7 +1323,7 @@ void KartModel::initInverseBoneMatrices()
     float striaght_frame = (float)m_animation_frame[AF_STRAIGHT];
     if (m_animation_frame[AF_STRAIGHT] == -1)
     {
-        Log::warn("KartModel", "%s has no striaght frame defined.",
+        Log::warn("KartModel", "%s has no straight frame defined.",
             m_model_filename.c_str());
         striaght_frame = 0.0f;
     }

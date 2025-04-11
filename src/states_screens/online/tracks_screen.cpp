@@ -30,6 +30,7 @@
 #include "guiengine/widgets/check_box_widget.hpp"
 #include "guiengine/widgets/dynamic_ribbon_widget.hpp"
 #include "guiengine/widgets/icon_button_widget.hpp"
+#include "guiengine/widgets/label_widget.hpp"
 #include "guiengine/widgets/list_widget.hpp"
 #include "guiengine/widgets/progress_bar_widget.hpp"
 #include "guiengine/widgets/spinner_widget.hpp"
@@ -218,6 +219,9 @@ void TracksScreen::beforeAddingWidget()
 {
     Screen::init();
 
+    // Add user-defined group to track groups
+    track_manager->setFavoriteTrackStatus(PlayerManager::getCurrentPlayer()->getFavoriteTrackStatus());
+
     m_selected_track = NULL;
     m_search_track = NULL;
     m_timer = getWidget<GUIEngine::ProgressBarWidget>("timer");
@@ -339,7 +343,7 @@ void TracksScreen::beforeAddingWidget()
 
     RibbonWidget* tabs = getWidget<RibbonWidget>("trackgroups");
     tabs->clearAllChildren();
-    
+
     RaceManager::MinorRaceModeType minor_mode = RaceManager::get()->getMinorMode();
     bool is_soccer = minor_mode == RaceManager::MINOR_MODE_SOCCER;
     bool is_arena = is_soccer || RaceManager::get()->isBattleMode();
@@ -450,10 +454,9 @@ void TracksScreen::init()
             m_track_icons->addTextureAsSprite(tex);
         }
 
-        int icon_height = getHeight() / 13;
-        m_track_icons->setScale(icon_height / 256.0f);
+        m_track_icons->setScale(1.0f / 128.0f);
         m_track_icons->setTargetIconSize(256, 256);
-        m_vote_list->setIcons(m_track_icons, (int)icon_height);
+        m_vote_list->setIcons(m_track_icons);
 
         const PeerVote* vote = cl->getVote(STKHost::get()->getMyHostId());
         if (vote)
@@ -567,6 +570,9 @@ void TracksScreen::init()
  */
 void TracksScreen::buildTrackList()
 {
+    // Add user-defined group to track groups
+    track_manager->setFavoriteTrackStatus(PlayerManager::getCurrentPlayer()->getFavoriteTrackStatus());
+
     DynamicRibbonWidget* tracks_widget = this->getWidget<DynamicRibbonWidget>("tracks");
     RibbonWidget* tabs = this->getWidget<RibbonWidget>("trackgroups");
 
@@ -575,7 +581,6 @@ void TracksScreen::buildTrackList()
     m_random_track_list.clear();
 
     const std::string& curr_group_name = tabs->getSelectionIDString(0);
-    const int track_amount = (int)track_manager->getNumberOfTracks();
 
     // First build a list of all tracks to be displayed
     // (e.g. exclude arenas, ...)
@@ -587,35 +592,77 @@ void TracksScreen::buildTrackList()
         assert(clrp);
     }
     PtrVector<Track, REF> tracks;
-    for (int n = 0; n < track_amount; n++)
+    if (curr_group_name == ALL_TRACK_GROUPS_ID)
     {
-        Track* curr = track_manager->getTrack(n);
-        core::stringw search_text;
-        if (m_search_track)
+        const int track_amount = (int)track_manager->getNumberOfTracks();
+        for (int n = 0; n < track_amount; n++)
         {
-            search_text = m_search_track->getText();
-            search_text.make_lower();
-        }
-        if (!search_text.empty() &&
-            curr->getName().make_lower().find(search_text.c_str()) == -1)
-            continue;
-        if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_EASTER_EGG
-            && !curr->hasEasterEggs())
-            continue;
-        if (!is_network &&
-            (curr->isArena() || curr->isSoccer() || curr->isInternal()))
-            continue;
-        if (curr_group_name != ALL_TRACK_GROUPS_ID &&
-            !curr->isInGroup(curr_group_name)) continue;
-        if (is_network &&
-            clrp->getAvailableTracks().find(curr->getIdent()) ==
-            clrp->getAvailableTracks().end())
-        {
-            continue;
-        }
-        tracks.push_back(curr);
-    }   // for n<track_amount
+            Track* curr = track_manager->getTrack(n);
+            core::stringw search_text;
+            if (m_search_track)
+            {
+                search_text = m_search_track->getText();
+                search_text.make_lower();
+            }
+            if (!search_text.empty() &&
+                curr->getName().make_lower().find(search_text.c_str()) == -1)
+                continue;
+            if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_EASTER_EGG
+                && !curr->hasEasterEggs())
+                continue;
+            if (!is_network &&
+                (curr->isArena() || curr->isSoccer() || curr->isInternal()))
+                continue;
+            if (is_network &&
+                clrp->getAvailableTracks().find(curr->getIdent()) ==
+                clrp->getAvailableTracks().end())
+            {
+                continue;
+            }
+            tracks.push_back(curr);
+        }   // for n<track_amount
+    }
+    else
+    {
+        // Get all tracks in this group and concatrate into one vector
+        std::vector<int> curr_tracks        = track_manager->getTracksInGroup(curr_group_name);
+        const std::vector<int>& curr_arenas = track_manager->getArenasInGroup(curr_group_name, false);
+        const std::vector<int>& curr_soccers = track_manager->getArenasInGroup(curr_group_name, true);
 
+        curr_tracks.insert(curr_tracks.end(), curr_arenas.begin(), curr_arenas.end());
+        curr_tracks.insert(curr_tracks.end(), curr_soccers.begin(), curr_soccers.end());
+        std::sort(curr_tracks.begin(), curr_tracks.end());
+        curr_tracks.resize(std::unique(curr_tracks.begin(), curr_tracks.end()) - curr_tracks.begin());
+        
+        const int track_amount = (int)curr_tracks.size();
+
+        for (int n = 0; n < track_amount; n++)
+        {
+            Track* curr = track_manager->getTrack(curr_tracks[n]);
+            core::stringw search_text;
+            if (m_search_track)
+            {
+                search_text = m_search_track->getText();
+                search_text.make_lower();
+            }
+            if (!search_text.empty() &&
+                curr->getName().make_lower().find(search_text.c_str()) == -1)
+                continue;
+            if (RaceManager::get()->getMinorMode() == RaceManager::MINOR_MODE_EASTER_EGG
+                && !curr->hasEasterEggs())
+                continue;
+            if (!is_network &&
+                (curr->isArena() || curr->isSoccer() || curr->isInternal()))
+                continue;
+            if (is_network &&
+                clrp->getAvailableTracks().find(curr->getIdent()) ==
+                clrp->getAvailableTracks().end())
+            {
+                continue;
+            }
+            tracks.push_back(curr);
+        }   // for n<track_amount
+    }
     tracks.insertionSort();
     for (unsigned int i = 0; i < tracks.size(); i++)
     {
@@ -628,6 +675,13 @@ void TracksScreen::buildTrackList()
                 _("Locked: solve active challenges to gain access to more!"),
                 "locked", curr->getScreenshotFile(), LOCKED_BADGE,
                 IconButtonWidget::ICON_PATH_TYPE_ABSOLUTE);
+        }
+        else if (PlayerManager::getCurrentPlayer()->isFavoriteTrack(curr->getIdent()))
+        {
+            tracks_widget->addItem(curr->getName(), curr->getIdent(),
+                curr->getScreenshotFile(), HEART_BADGE,
+                IconButtonWidget::ICON_PATH_TYPE_ABSOLUTE );
+            m_random_track_list.push_back(curr->getIdent());
         }
         else
         {

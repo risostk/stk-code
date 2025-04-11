@@ -24,7 +24,6 @@
 #include <ge_render_info.hpp>
 #include "guiengine/widgets/kart_stats_widget.hpp"
 #include "guiengine/widgets/model_view_widget.hpp"
-#include "guiengine/widgets/player_name_spinner.hpp"
 #include "input/input_device.hpp"
 #include "karts/kart_model.hpp"
 #include "karts/kart_properties.hpp"
@@ -70,9 +69,10 @@ PlayerKartWidget::PlayerKartWidget(KartSelectionScreen* parent,
     target_h = m_h;
 
     // ---- Player identity spinner
-    m_player_ident_spinner = NULL;
-
-    m_player_ident_spinner = new PlayerNameSpinner(parent, m_player_id);
+    m_player_ident_spinner = new SpinnerWidget();
+    m_player_ident_spinner->setUseBackgroundColor();
+    m_player_ident_spinner->setSpinnerWidgetPlayerID(m_player_id);
+    
     m_player_ident_spinner->m_x = player_name_x;
     m_player_ident_spinner->m_y = player_name_y;
     m_player_ident_spinner->m_w = player_name_w;
@@ -238,7 +238,11 @@ PlayerKartWidget::PlayerKartWidget(KartSelectionScreen* parent,
     m_model_view->setRotateContinuously( 35.0f );
 
     // ---- Kart name label
-    m_kart_name = new LabelWidget(LabelWidget::NORMAL);
+    m_kart_name = new LabelWidget(
+        m_parent_screen->m_multiplayer ?
+        LabelWidget::TINY_TITLE:
+        LabelWidget::SMALL_TITLE);
+    
     m_kart_name->setText(props->getName(), false);
     m_kart_name->m_properties[PROP_TEXT_ALIGN] = "center";
     m_kart_name->m_properties[PROP_ID] =
@@ -306,14 +310,14 @@ void PlayerKartWidget::setPlayerID(const int newPlayerID)
     // Change the player ID
     m_player_id = newPlayerID;
     if (!m_ready)
-        m_player_ident_spinner->setID(m_player_id);
+        m_player_ident_spinner->setSpinnerWidgetPlayerID(m_player_id);
     m_kart_stats->setDisplayIcons(m_player_id == 0);
     // restore previous focus, but with new player ID
     if (focus != NULL) focus->setFocusForPlayer(m_player_id);
 
     if (m_player_ident_spinner != NULL)
     {
-        m_player_ident_spinner->setID(m_player_id);
+        m_player_ident_spinner->setSpinnerWidgetPlayerID(m_player_id);
     }
 }   // setPlayerID
 
@@ -542,6 +546,19 @@ void PlayerKartWidget::onUpdate(float delta)
         if (m_h < target_h) m_h = target_h;
     }
 
+    updateSize();
+    // When coming from the overworld, we must rebuild the preview scene at
+    // least once, since the scene is being cleared by leaving the overworld
+    if (m_not_updated_yet)
+    {
+        m_model_view->clearRttProvider();
+        m_not_updated_yet = false;
+    }
+}   // onUpdate
+
+// -------------------------------------------------------------------------
+void PlayerKartWidget::updateSize()
+{
     setSize(m_x, m_y, m_w, m_h);
 
     if (m_player_ident_spinner != NULL)
@@ -580,15 +597,7 @@ void PlayerKartWidget::onUpdate(float delta)
                       kart_name_y,
                       kart_name_w,
                       kart_name_h);
-
-    // When coming from the overworld, we must rebuild the preview scene at
-    // least once, since the scene is being cleared by leaving the overworld
-    if (m_not_updated_yet)
-    {
-        m_model_view->clearRttProvider();
-        m_not_updated_yet = false;
-    }
-}   // onUpdate
+}   // updateSize
 
 // -------------------------------------------------------------------------
 /** Event callback */

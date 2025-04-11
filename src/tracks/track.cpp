@@ -23,10 +23,11 @@
 #include "audio/music_manager.hpp"
 #include "challenges/challenge_status.hpp"
 #include "challenges/unlock_manager.hpp"
+#include "config/favorite_status.hpp"
 #include "config/player_manager.hpp"
 #include "config/stk_config.hpp"
 #include "config/user_config.hpp"
-#include "graphics/camera_end.hpp"
+#include "graphics/camera/camera_end.hpp"
 #include "graphics/CBatchingMesh.hpp"
 #include "graphics/central_settings.hpp"
 #include "graphics/cpu_particle_manager.hpp"
@@ -212,12 +213,15 @@ bool Track::operator<(const Track &other) const
     PlayerProfile *p = PlayerManager::getCurrentPlayer();
     bool this_is_locked = p->isLocked(getIdent());
     bool other_is_locked = p->isLocked(other.getIdent());
-    if(this_is_locked == other_is_locked)
-    {
-        return getSortName() < other.getSortName();
-    }
-    else
+    bool this_is_favorite = p->isFavoriteTrack(getIdent());
+    bool other_is_favorite = p->isFavoriteTrack(other.getIdent());
+    // Locked tracks cannot be favorite, so favorites < normal < locked
+    if (this_is_favorite != other_is_favorite)
+        return this_is_favorite;
+    else if(this_is_locked != other_is_locked)
         return other_is_locked;
+    else
+        return getSortName() < other.getSortName();
 }   // operator<
 
 //-----------------------------------------------------------------------------
@@ -537,8 +541,8 @@ void Track::loadTrackInfo()
     m_sun_specular_color    = video::SColor(255, 255, 255, 255);
     m_sun_diffuse_color     = video::SColor(255, 255, 255, 255);
     m_sun_position          = core::vector3df(0, 10, 10);
-    irr_driver->setSSAORadius(1.);
-    irr_driver->setSSAOK(1.5);
+    irr_driver->setSSAORadius(0.5);
+    irr_driver->setSSAOK(3.);
     irr_driver->setSSAOSigma(1.);
     XMLNode *root           = file_manager->createXMLTree(m_filename);
 
@@ -612,7 +616,7 @@ void Track::loadTrackInfo()
         m_all_modes.push_back(tm);
     }
 
-    if(m_groups.size()==0) m_groups.push_back(DEFAULT_GROUP_NAME);
+    if(m_groups.size()==0) m_groups.push_back(FavoriteStatus::DEFAULT_FAVORITE_GROUP_NAME);
     const XMLNode *xml_node = root->getNode("curves");
 
     if(xml_node) loadCurves(*xml_node);
@@ -653,10 +657,6 @@ void Track::loadTrackInfo()
         // Currently only max eight players in soccer mode
         m_max_arena_players = 8;
     }
-    // Max 10 players supported in arena
-    if (m_max_arena_players > 10)
-        m_max_arena_players = 10;
-
 }   // loadTrackInfo
 
 //-----------------------------------------------------------------------------
@@ -936,7 +936,7 @@ void Track::createPhysicsModel(unsigned int main_track_count,
 // -----------------------------------------------------------------------------
 
 
-/** Convert the graohics track into its physics equivalents.
+/** Convert the graphics track into its physics equivalents.
  *  \param mesh The mesh to convert.
  *  \param node The scene node.
  */
@@ -2090,7 +2090,28 @@ void Track::loadTrackModel(bool reverse_track, unsigned int mode_id)
     loadObjects(root, path, model_def_loader, true, NULL, NULL);
     main_loop->renderGUI(5000);
 
-    Log::info("Track", "Overall scene complexity estimated at %d", irr_driver->getSceneComplexity());
+    // If the track is low complexity, increase distances for LoD nodes
+    // Scene complexity is not computed before LoD nodes are loaded, so
+    // instead we set a variable that will be used to update the distances
+    // later on.
+    float squared_multiplier = 1.0f;
+    if (irr_driver->getSceneComplexity() < 1500)
+    {
+        float ratio = 1.0f;
+        // Cap the potential effect
+        if (irr_driver->getSceneComplexity() < 100)
+            ratio = 15.0f;
+        else
+            ratio = 1500.0f / (float)(irr_driver->getSceneComplexity());
+
+        squared_multiplier = 0.3f + 0.7f * ratio;
+    }
+    irr_driver->setLODMultiplier(squared_multiplier);
+    // The LoD distances are stored squared in the node, therefore the real multiplier
+    // is the square root of the one that gets applied
+    Log::info("Track", "Overall scene complexity estimated at %d, Auto-LoD multiplier is %f",
+              irr_driver->getSceneComplexity(), sqrtf(squared_multiplier));
+
     // Correct the parenting of meta library
     for (auto& p : m_meta_library)
     {
@@ -2355,11 +2376,6 @@ void Track::loadObjects(const XMLNode* root, const std::string& path,
         if (name == "track" || name == "default-start") continue;
         if (name == "object" || name == "library")
         {
-            int geo_level = 0;
-            node->get("geometry-level", &geo_level);
-            if (UserConfigParams::m_geometry_level + geo_level - 2 > 0 &&
-                !NetworkConfig::get()->isNetworking())
-                continue;
             m_track_object_manager->add(*node, parent, model_def_loader, parent_library);
         }
         else if (name == "water")
@@ -2507,15 +2523,16 @@ void Track::handleSky(const XMLNode &xml_node, const std::string &filename)
 #endif   // !SERVER_ONLY
             {
 #ifndef SERVER_ONLY
+                std::string fullpath;
                 if (GE::getDriver()->getDriverType() == video::EDT_VULKAN)
                 {
                     io::path p = file_manager->searchTexture(v[i]).c_str();
                     if (!p.empty())
                     {
-                        io::path fullpath = file_manager->getFileSystem()
+                        fullpath = file_manager->getFileSystem()
                             ->getAbsolutePath(p).c_str();
                         GE::getGEConfig()->m_ondemand_load_texture_paths.
-                            insert(fullpath.c_str());
+                            insert(fullpath);
                     }
                 }
 #endif
@@ -2525,6 +2542,13 @@ void Track::handleSky(const XMLNode &xml_node, const std::string &filename)
                     t->grab();
                     obj = t;
                 }
+#ifndef SERVER_ONLY
+                if (GE::getDriver()->getDriverType() == video::EDT_VULKAN)
+                {
+                    GE::getGEConfig()->m_ondemand_load_texture_paths.erase(
+                        fullpath);
+                }
+#endif
             }
             if (obj)
             {

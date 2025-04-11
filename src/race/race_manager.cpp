@@ -60,6 +60,7 @@
 #include "states_screens/main_menu_screen.hpp"
 #include "states_screens/state_manager.hpp"
 #include "tracks/track_manager.hpp"
+#include "utils/profiler.hpp"
 #include "utils/ptr_vector.hpp"
 #include "utils/stk_process.hpp"
 #include "utils/string_utils.hpp"
@@ -137,13 +138,14 @@ RaceManager::RaceManager()
     m_flag_deactivated_ticks = stk_config->time2Ticks(3.0f);
     m_skipped_tracks_in_gp = 0;
     m_gp_time_target = 0.0f;
-    m_gp_total_laps = 0;
     setMaxGoal(0);
     setTimeTarget(0.0f);
     setReverseTrack(false);
     setRecordRace(false);
     setRaceGhostKarts(false);
     setWatchingReplay(false);
+    setBenchmarking(false);
+    m_scheduled_benchmark = false;
     setTrack("jungle");
     m_default_ai_list.clear();
     setNumPlayers(0);
@@ -429,10 +431,7 @@ void RaceManager::startNew(bool from_overworld)
                     m_skipped_tracks_in_gp = m_saved_gp->getSkippedTracks();
                     Log::info("RaceManager","%d",isLapTrialMode());
                     if (isLapTrialMode())
-                    {
                         m_gp_time_target = m_saved_gp->getTimeTarget();
-                        m_gp_total_laps = m_saved_gp->getPlayerTotalLaps();
-                    }
                 }   // if m_saved_gp==NULL
             }   // if m_continue_saved_gp
         }   // if !network_world
@@ -792,7 +791,7 @@ void RaceManager::saveGP()
             m_grand_prix.getReverseType(),
             m_skipped_tracks_in_gp,
             isLapTrialMode() ? m_gp_time_target : 0.0f,
-            isLapTrialMode() ? m_gp_total_laps : 0,
+            0,
             m_kart_status);
 
         // If a new GP is saved, delete any other saved data for this
@@ -1322,3 +1321,27 @@ core::stringw RaceManager::getDifficultyName(Difficulty diff) const
     }
     return "";
 }   // getDifficultyName
+
+//---------------------------------------------------------------------------------------------
+/** Set the benchmarking mode as requested, and turn off the profiler if needed. */
+void RaceManager::setBenchmarking(bool benchmark)
+{
+    m_benchmarking = benchmark;
+    m_scheduled_benchmark = false;
+
+    // If the benchmark mode is turned off and the profiler is still activated,
+    // turn the profiler off and reset the drawing mode to default.
+    if (!m_benchmarking && UserConfigParams::m_profiler_enabled)
+    {
+        profiler.desactivate();
+        profiler.setDrawing(true);
+    }
+}   // setBenchmarking
+
+//---------------------------------------------------------------------------------------------
+/** Schedule a benchmark. This function is used because the video options screen
+* might need to be reloaded when switching between old and modern renderer.*/
+void RaceManager::scheduleBenchmark()
+{
+    m_scheduled_benchmark = true;
+}   // scheduleBenchmark

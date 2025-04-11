@@ -30,15 +30,15 @@ class KartSelectionScreen;
 
 namespace GUIEngine
 {
-    class PlayerNameSpinner;
     class KartStatsWidget;
     class ModelViewWidget;
     class LabelWidget;
+    class SpinnerWidget;
 
     /** A widget representing the kart selection for a player (i.e. the player's
      *  number, name, the kart view, the kart's name) */
     class PlayerKartWidget : public GUIEngine::Widget,
-        public GUIEngine::SpinnerWidget::ISpinnerConfirmListener
+        public SpinnerWidget::ISpinnerConfirmListener
     {
         /** Whether this player confirmed their selection */
         bool m_ready;
@@ -72,12 +72,14 @@ namespace GUIEngine
         long m_magic_number;
 #endif
 
+        // -------------------------------------------------------------------------
+        void updateSize();
     public:
 
         LEAK_CHECK()
 
         /** Sub-widgets created by this widget */
-        PlayerNameSpinner* m_player_ident_spinner;
+        SpinnerWidget* m_player_ident_spinner;
         KartStatsWidget* m_kart_stats;
         ModelViewWidget* m_model_view;
         LabelWidget* m_kart_name;
@@ -104,7 +106,7 @@ namespace GUIEngine
         /** Called when players are renumbered (changes the player ID) */
         void setPlayerID(const int newPlayerID);
         // ------------------------------------------------------------------------
-        PlayerNameSpinner* getPlayerNameSpinner() const
+        SpinnerWidget* getPlayerNameSpinner() const
                                                  { return m_player_ident_spinner; }
         // ------------------------------------------------------------------------
         /** Returns the ID of this player */
@@ -166,6 +168,15 @@ namespace GUIEngine
         virtual GUIEngine::EventPropagation onSpinnerConfirmed();
         // -------------------------------------------------------------------------
         void enableHandicapForNetwork();
+        // -------------------------------------------------------------------------
+        void updateSizeNow(int x, int y, int w, int h)
+        {
+            target_x = m_x = x;
+            target_y = m_y = y;
+            target_w = m_w = w;
+            target_h = m_h = h;
+            updateSize();
+        }
     };   // PlayerKartWidget
 }
 

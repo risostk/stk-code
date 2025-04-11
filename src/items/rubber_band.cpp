@@ -55,8 +55,11 @@ core::stringw getPlungerString(const AbstractKart *kart_victim,
     }
 }
 
+#ifndef SERVER_ONLY
 #include <array>
+#include <ge_main.hpp>
 #include <ge_vulkan_dynamic_spm_buffer.hpp>
+#endif
 #include <IMeshSceneNode.h>
 #include <IVideoDriver.h>
 #include <SMesh.h>
@@ -85,9 +88,9 @@ RubberBand::RubberBand(Plunger *plunger, AbstractKart *kart)
     {
         if (CVS->isDeferredEnabled())
         {
-            color.setRed(SP::srgb255ToLinear(color.getRed()));
-            color.setGreen(SP::srgb255ToLinear(color.getGreen()));
-            color.setBlue(SP::srgb255ToLinear(color.getBlue()));
+            color.setRed(GE::srgb255ToLinear(color.getRed()));
+            color.setGreen(GE::srgb255ToLinear(color.getGreen()));
+            color.setBlue(GE::srgb255ToLinear(color.getBlue()));
         }
         m_dy_dc = std::make_shared<SP::SPDynamicDrawCall>
             (scene::EPT_TRIANGLE_STRIP, SP::SPShaderManager::get()->getSPShader
